@@ -66,7 +66,7 @@ bind_2016$Weights <- c(Demo_2016_Final$Weights, Demo_Youth_2016$Weights)
 ```
 
 ```{r}
-write.csv(bind_2016, file = "Demo_2016_Full_Final.csv")
+write.csv(bind_2016, file = "Demo_2016_Final.csv")
 
 
 ```
