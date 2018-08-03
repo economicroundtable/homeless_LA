@@ -1,0 +1,183 @@
+---
+title: "Homelessness_2001_2017"
+author: "Paul Beeman"
+date: "7/12/2018"
+output: html_document
+---
+
+```{r age }
+Homelessness_Multi_Year <- data.frame(Survey_Year = c(rep("Unsheltered 2011", nrow(Demographics_Clean_2011)), rep("Unsheltered 2013", nrow(Demographics_Clean_2013)), rep("Unsheltered 2015", nrow(Demographics_Clean_2015)), rep("Unsheltered 2016", nrow(Demographics_Clean_2016)), rep("Unsheltered 2017", nrow(Demographics_Full_2017)),rep("Sheltered 2013", nrow(HMIS_2013)),rep("Sheltered 2015", nrow(HMIS_2015)),rep("Sheltered 2016", nrow(HMIS_Clean_2016)), rep("Sheltered 2017", nrow(HMIS_Clean_2017)))) 
+                                        
+Homelessness_Multi_Year$Birth_Year <-                               c(Demographics_Clean_2011$Birth_Year, Demographics_Clean_2013$Birth_Year, Demographics_Clean_2015$Birth_Year, Demographics_Clean_2016$Birth_Year, Demographics_Full_2017$Birth_Year, HMIS_Clean_2013$Birth_Year,HMIS_2015$BirthYear ,HMIS_Clean_2016$Birth_Year, HMIS_Clean_2017$Birth_Year)
+
+Homelessness_Multi_Year$Age <- c(Demographics_Clean_2011$Age, Demographics_Clean_2013$Age, Demographics_Clean_2015$Age, Demographics_Clean_2016$Age, Demographics_Full_2017$Age,HMIS_2013$Age, HMIS_2015$age,HMIS_Clean_2016$Age, HMIS_Clean_2017$Age)
+
+
+```
+
+```{r gender}
+Homelessness_Multi_Year$Gender <- c(as.character(Demographics_Clean_2011$Gender), as.character(Demographics_Clean_2013$Gender), as.character(Demographics_Clean_2015$Gender), as.character(Demographics_Clean_2016$Gender), as.character(Demographics_Full_2017$Gender),as.character(HMIS_Clean_2013$Gender),as.character(HMIS_2015$Gender_r) ,as.character(HMIS_Clean_2016$Gender), as.character(HMIS_Clean_2017$Gender))
+
+```
+
+```{r race/ethnicity}
+#ETHNICITY
+Homelessness_Multi_Year$Ethnicity <- c(as.character(Demographics_Clean_2011$Ethnicity), as.character(Demographics_Clean_2013$Ethnicity), as.character(Demographics_Clean_2015$Ethnicity), as.character(Demographics_Clean_2016$Ethnicity), as.character(Demographics_Full_2017$Ethnicity),as.character(trimws(HMIS_2013$Ethnicity)),as.character(HMIS_Clean_2015$Ethnicity) ,as.character(HMIS_Clean_2016$Ethnicity), as.character(HMIS_Clean_2017$Ethnicity))
+
+Homelessness_Multi_Year$Ethnicity <- recode(Homelessness_Multi_Year$Ethnicity, "Other" ="Other Ethnicity")
+
+#Race_full
+Homelessness_Multi_Year$Race_Full <- c(as.character(Demographics_Clean_2011$Race_Full), as.character(Demographics_Clean_2013$Race_Full), as.character(Demographics_Clean_2015$Race_Full), as.character(Demographics_Clean_2016$Race_Full), as.character(Demographics_Full_2017$Race_Full), as.character(HMIS_2013$Race), as.character(HMIS_2015$Race) ,as.character(HMIS_Clean_2016$Race_Full), as.character(HMIS_Clean_2017$Race_Full))
+
+#Race recode
+Homelessness_Multi_Year$Race_Recode <- c(as.character(Demographics_Clean_2011$Race_Recode), as.character(Demographics_Clean_2013$Race_Recode), as.character(Demographics_Clean_2015$Race_Recode), as.character(Demographics_Clean_2016$Race_Recode), as.character(Demographics_Full_2017$Race_Recode), as.character(HMIS_2013$Race_r), as.character(HMIS_Clean_2015$Race_Recode), as.character(HMIS_Clean_2016$Race_Recode),as.character(HMIS_Clean_2017$Race_Recode))
+
+Homelessness_Multi_Year$Race_Recode[Homelessness_Multi_Year$Race_Recode == "Other"] <- "Other Ethnicity"
+```
+
+```{r veteran}
+Homelessness_Multi_Year$Veteran <- c(Demographics_Clean_2011$Veteran, Demographics_Clean_2013$Veteran, Demographics_Clean_2015$Veteran, Demographics_Clean_2016$Veteran, Demographics_Full_2017$Veteran,HMIS_Clean_2013$Veteran,HMIS_Clean_2015$Veteran ,HMIS_Clean_2016$Veteran, HMIS_Clean_2017$Veteran)
+
+Homelessness_Multi_Year$Veteran <- recode(Homelessness_Multi_Year$Veteran, "2" =0)
+
+```
+
+```{r chronic variables}
+#Chronic Time
+Homelessness_Multi_Year$Chronic_Time <- c(Demographics_Clean_2011$Chronic_Time, Demographics_Clean_2013$Chronic_Time, Demographics_Clean_2015$Chronic_Time, Demographics_Clean_2016$Chronic_Time, Demographics_Full_2017$Chronic_Time, HMIS_Clean_2013$Chronic_Time, HMIS_Clean_2015$Chronic_Time, HMIS_Clean_2016$Chronic_Time, HMIS_Clean_2017$Chronic_Time)
+
+Homelessness_Multi_Year$Chronic_Time <-  recode(Homelessness_Multi_Year$Chronic_Time, "2" = 0)
+
+#Chronic Health 
+
+Homelessness_Multi_Year$Chronic_Condition <- c(Demographics_Clean_2011$Chronic_Condition, Demographics_Clean_2013$Chronic_Condition, Demographics_Clean_2015$Chronic_Condition, Demographics_Clean_2016$Chronic_Condition, Demographics_Full_2017$Chronic_Condition, HMIS_Clean_2013$Chronic_Condition, HMIS_Clean_2015$Chronic_Condition, HMIS_Clean_2016$Chronic_Condition, HMIS_Clean_2017$Chronic_Condition)
+
+Homelessness_Multi_Year$Chronic_Condition <- recode(Homelessness_Multi_Year$Chronic_Condition, "2" =0)
+
+#Chronic
+
+Homelessness_Multi_Year$Chronic <- c(Demographics_Clean_2011$Chronic, Demographics_Clean_2013$Chronic, Demographics_Clean_2015$Chronic, Demographics_Clean_2016$Chronic, Demographics_Full_2017$Chronic, HMIS_Clean_2013$Chronic,HMIS_Clean_2015$Chronic, HMIS_Clean_2016$Chronic,HMIS_Clean_2017$Chronic)
+
+Homelessness_Multi_Year$Chronic <- recode(Homelessness_Multi_Year$Chronic, "2" =0)
+```
+
+```{r living with a child}
+Homelessness_Multi_Year$Adult_With_Child<- c(Demographics_Clean_2011$Adult_With_Child, Demographics_Clean_2013$Adult_With_Child, Demographics_Clean_2015$Adult_With_Child, Demographics_Clean_2016$Adult_With_Child, Demographics_Full_2017$Adult_With_Child, HMIS_Clean_2013$Adult_With_Child, HMIS_Clean_2015$Adult_With_Child,HMIS_Clean_2016$Adult_With_Child, HMIS_Clean_2017$Adult_With_Child)
+
+Homelessness_Multi_Year$Adult_With_Child <- recode(Homelessness_Multi_Year$Adult_With_Child, "2" =0)
+
+```
+
+```{r Time/Movement variables}
+#Times homeless in the past 3 year 
+Homelessness_Multi_Year$Times_Homeless_3yrs<- c(as.character(Demographics_Clean_2011$Times_Homeless_3yrs), as.character(Demographics_Clean_2013$Times_Homeless_3yrs), as.character(Demographics_Clean_2015$Times_Homeless_3yrs), as.character(Demographics_Clean_2016$Times_Homeless_3yrs), as.character(Demographics_Full_2017$Times_Homeless_3yrs),HMIS_Clean_2013$Times_Hmls_Past_3yrs , HMIS_Clean_2015$Times_Hmls_3yrs,as.character(HMIS_Clean_2016$Times_Homeless_3yrs), as.character(HMIS_Clean_2017$Times_Homeless_3yrs))
+
+Homelessness_Multi_Year$Times_Homeless_3yrs <- tolower(Homelessness_Multi_Year$Times_Homeless_3yrs)
+
+#Times homesless in the past year
+#Not present for every year (HMIS 2017, HMIS 2016, Demographics 2016)
+Homelessness_Multi_Year$Times_Homeless_Past_Year<- c(as.character(Demographics_Clean_2011$Times_Homeless_Past_Year), as.character(Demographics_Clean_2013$Times_Homeless_Past_Year), as.character(Demographics_Clean_2015$Times_Homeless_Past_Year), rep(NA, nrow(Demographics_Clean_2016)), as.character(Demographics_Full_2017$Times_Homeless_3yrs),rep(NA, nrow(HMIS_Clean_2013)), rep(NA, nrow(HMIS_Clean_2015)), rep(NA, nrow(HMIS_Clean_2016)),rep(NA, nrow(HMIS_Clean_2017)))
+
+Homelessness_Multi_Year$Times_Homeless_Past_Year <- tolower(Homelessness_Multi_Year$Times_Homeless_Past_Year)
+
+#Current Duration
+Homelessness_Multi_Year$Current_Stint_Duration<- c(as.character(Demographics_Clean_2011$Current_Stint_Duration), as.character(Demographics_Clean_2013$Current_Stint_Duration), as.character(Demographics_Clean_2015$Current_Stint_Duration), as.character(Demographics_Clean_2016$Current_Stint_Duration), as.character(Demographics_Full_2017$Current_Stint_Duration), as.character(HMIS_Clean_2013$Current_Stint_Duration),HMIS_Clean_2015$Current_Stint_Duration ,as.character(HMIS_Clean_2016$Current_Stint_Duration), as.character(HMIS_Clean_2017$Current_Stint_Duration))
+                                                   
+Homelessness_Multi_Year$Current_Stint_Duration <- tolower(Homelessness_Multi_Year$Current_Stint_Duration)
+
+Homelessness_Multi_Year$Current_Stint_Duration <- recode(Homelessness_Multi_Year$Current_Stint_Duration, "4-5 months" = "4-11 months", "4-6 months" = "4-11 months", "6-11 months" =  "4-11 months", "7-11 months" = "4-11 months")
+
+#SPA
+Homelessness_Multi_Year$SPA<- c(Demographics_Clean_2011$SPA, Demographics_Clean_2013$SPA, Demographics_Clean_2015$SPA, Demographics_Clean_2016$SPA, Demographics_Full_2017$SPA, HMIS_2013$SPA, HMIS_2015$spa,HMIS_Clean_2016$SPA, HMIS_Clean_2017$SPA)
+
+#CT
+Homelessness_Multi_Year$Census_Tract <- c(rep(NA, nrow(Demographics_Clean_2011)), as.numeric(as.character(Demographics_Clean_2013$Census_Tract)), as.numeric(as.character(Demographics_Clean_2015$Census_Tract)), as.numeric(as.character(Demographics_Clean_2016$Census_Tract)), as.numeric(as.character(Demographics_Full_2017$Census_Tract)), c(rep(NA, nrow(HMIS_2013))), c(rep(NA, nrow(HMIS_2015))),as.numeric(as.character(HMIS_Clean_2016$Census_Tract)), as.numeric(as.character(HMIS_Clean_2017$Census_Tract)))
+
+```
+
+```{r Domestic Violence}
+Homelessness_Multi_Year$Physical_Sexual_Abuse<- c(Demographics_Clean_2011$Physical_Sexual_Abuse, Demographics_Clean_2013$Physical_Sexual_Abuse, Demographics_Clean_2015$Physical_Sexual_Abuse, Demographics_Clean_2016$Physical_Sexual_Abuse, Demographics_Full_2017$Physical_Sexual_Abuse,as.numeric(as.character(HMIS_2013$Domestic_Violence)),HMIS_Clean_2015$Physical_Sexual_Abuse ,HMIS_Clean_2016$Physical_Sexual_Abuse, HMIS_Clean_2017$Physical_Sexual_Abuse)
+
+Homelessness_Multi_Year$Physical_Sexual_Abuse <- recode(Homelessness_Multi_Year$Physical_Sexual_Abuse, "2" =0)
+
+```
+
+```{r Disabilities/Illness}
+#Currently or ever experienced or diagnosed with any of the following (a general flagging variable)
+#These are the conditions that show up across fields, but there are several other conditions that are summarized in the variable chronic condition
+#Shift 0 = unknown
+#Physical
+Homelessness_Multi_Year$Physical_Disability<- c(Demographics_Clean_2011$Physical_Disability_Past_Year, Demographics_Clean_2013$Physical_Disability_Past_Year, Demographics_Clean_2015$Physical_Disability_Ever, Demographics_Clean_2016$Physical_Disability_Ever, Demographics_Full_2017$Physical_Disability_Ever, as.numeric(HMIS_2013$physical)-1,HMIS_Clean_2015$Physical_Disability ,HMIS_Clean_2016$Physical_Disability,HMIS_Clean_2017$Physical_Disability)
+
+Homelessness_Multi_Year$Physical_Disability <- recode(Homelessness_Multi_Year$Physical_Disability, "2" = 0)
+Homelessness_Multi_Year$Physical_Disability[is.na(Homelessness_Multi_Year$Physical_Disability)] <- 0
+
+#Mental
+Homelessness_Multi_Year$Mental_Illness<- c(Demographics_Clean_2011$Mental_Illness_Past_Year, Demographics_Clean_2013$Mental_Illness_Past_Year, Demographics_Clean_2015$Mental_Illness_Ever, Demographics_Clean_2016$Mental_Illness_Ever, Demographics_Full_2017$Mental_Illness_Ever, as.numeric(HMIS_2013$MentallyIll)-1, HMIS_Clean_2015$Mental_Illness, HMIS_Clean_2016$Mental_Illness ,HMIS_Clean_2017$Mental_Illness)
+
+Homelessness_Multi_Year$Mental_Illness <- recode(Homelessness_Multi_Year$Mental_Illness, "2" = 0)
+
+Homelessness_Multi_Year$Mental_Illness[is.na(Homelessness_Multi_Year$Mental_Illness)] <- 0
+
+#Alcohol
+Homelessness_Multi_Year$Alcohol_Abuse<- c(Demographics_Clean_2011$Alcohol_Abuse_Past_Year, Demographics_Clean_2013$Alcohol_Abuse_Past_Year, Demographics_Clean_2015$Alcohol_Abuse_Ever, Demographics_Clean_2016$Alcohol_Abuse_Ever, Demographics_Full_2017$Alcohol_Abuse_Ever,rep(NA, nrow(HMIS_Clean_2013)), HMIS_Clean_2015$Alcohol_Abuse, HMIS_Clean_2016$Alcohol_Abuse, HMIS_Clean_2017$Alcohol_Abuse)
+
+Homelessness_Multi_Year$Alcohol_Abuse <- recode(Homelessness_Multi_Year$Alcohol_Abuse, "2" = 0)
+
+#Drug
+Homelessness_Multi_Year$Drug_Abuse<- c(Demographics_Clean_2011$Drug_Abuse_Past_Year, Demographics_Clean_2013$Drug_Abuse_Past_Year, Demographics_Clean_2015$Drug_Abuse_Ever, Demographics_Clean_2016$Drug_Abuse_Ever, Demographics_Full_2017$Drug_Abuse_Ever,rep(NA, nrow(HMIS_Clean_2013)), HMIS_Clean_2015$Drug_Abuse,HMIS_Clean_2016$Drug_Abuse,  HMIS_Clean_2017$Drug_Abuse)
+
+Homelessness_Multi_Year$Drug_Abuse <- recode(Homelessness_Multi_Year$Drug_Abuse, "2" = 0)
+
+#Drug/Alcohol Catch all variable
+Homelessness_Multi_Year$Drug_Alcohol_History<- c(Demographics_Clean_2011$Drug_Alcohol_History, Demographics_Clean_2013$Drug_Alcohol_History, Demographics_Clean_2015$Drug_Alcohol_History, Demographics_Clean_2016$Drug_Alcohol_History, Demographics_Full_2017$Drug_Alcohol_History, as.numeric(HMIS_2013$Substance_Abuser)-1,HMIS_Clean_2015$Drug_Alcohol_History ,HMIS_Clean_2016$Substance_Abuse, HMIS_Clean_2017$Substance_Abuse)
+
+Homelessness_Multi_Year$Drug_Alcohol_History <- recode(Homelessness_Multi_Year$Drug_Alcohol_History, "2" = 0)
+Homelessness_Multi_Year$Drug_Alcohol_History[is.na(Homelessness_Multi_Year$Drug_Alcohol_History)] <- 0
+#HIV
+Homelessness_Multi_Year$HIV_Positive<- c(Demographics_Clean_2011$HIV_Positive, Demographics_Clean_2013$HIV_Positive, Demographics_Clean_2015$HIV_Positive, Demographics_Clean_2016$HIV_Positive, Demographics_Full_2017$HIV_Positive,as.numeric(HMIS_2013$HIV_AIDS)-1, HMIS_Clean_2015$HIV_Postive, HMIS_Clean_2016$HIV_Positive, HMIS_Clean_2017$HIV_Positive)
+
+Homelessness_Multi_Year$HIV_Positive <- recode(Homelessness_Multi_Year$HIV_Positive, "2" = 0)
+Homelessness_Multi_Year$HIV_Positive[is.na(Homelessness_Multi_Year$HIV_Positive)] <- 0
+
+```
+
+```{r employment}
+#HMIS 2017 is nearly completely blank
+
+#Part Time
+Homelessness_Multi_Year$Part_Time<- c(Demographics_Clean_2011$Part_Time, Demographics_Clean_2013$Part_Time, Demographics_Clean_2015$Part_Time, Demographics_Clean_2016$Part_Time, Demographics_Full_2017$Part_Time, rep(NA, nrow(HMIS_Clean_2013)), rep(NA, nrow(HMIS_Clean_2015)),HMIS_Clean_2016$Part_Time,HMIS_Clean_2017$Part_Time)
+
+#Homelessness_Multi_Year$Part_Time <- recode(Homelessness_Multi_Year$Part_Time, "2" = 0)
+
+#Full Time
+Homelessness_Multi_Year$Full_Time<- c(Demographics_Clean_2011$Full_Time, Demographics_Clean_2013$Full_Time, Demographics_Clean_2015$Full_Time, Demographics_Clean_2016$Full_Time, Demographics_Full_2017$Full_Time, rep(NA, nrow(HMIS_Clean_2013)), rep(NA, nrow(HMIS_Clean_2015)),HMIS_Clean_2016$Full_Time,HMIS_Clean_2017$Full_Time)
+
+#Homelessness_Multi_Year$Full_Time <- recode(Homelessness_Multi_Year$Full_Time, "2" = 0)
+
+#Unemployed looking
+Homelessness_Multi_Year$Unemployed_Looking<- c(Demographics_Clean_2011$Unemployed_Looking, Demographics_Clean_2013$Unemployed_Looking, Demographics_Clean_2015$Unemployed_Looking, Demographics_Clean_2016$Unemployed_Looking, Demographics_Full_2017$Unemployed_Looking,rep(NA, nrow(HMIS_Clean_2013)),rep(NA, nrow(HMIS_Clean_2015)) ,HMIS_Clean_2016$Unemployed_Looking, HMIS_Clean_2017$Unemployed_Looking)
+
+#Homelessness_Multi_Year$Unemployed_Looking <- recode(Homelessness_Multi_Year$Unemployed_Looking, "2" = 0)
+
+#Unemployed not looking
+Homelessness_Multi_Year$Unemployed_Not_Looking<- c(Demographics_Clean_2011$Unemployed_Not_Looking, Demographics_Clean_2013$Unemployed_Not_Looking, Demographics_Clean_2015$Unemployed_Not_Looking, Demographics_Clean_2016$Unemployed_Not_Looking, Demographics_Full_2017$Unemployed_Not_Looking, rep(NA, nrow(HMIS_Clean_2013)),rep(NA, nrow(HMIS_Clean_2015)) ,HMIS_Clean_2016$Unemployed_Not_Looking, HMIS_Clean_2017$Unemployed_Not_Looking)
+
+#Homelessness_Multi_Year$Unemployed_Not_Looking <- recode(Homelessness_Multi_Year$Unemployed_Not_Looking, "2" = 0)
+
+```
+
+
+
+
+
+```{r view data}
+View(Homelessness_Multi_Year)
+
+```
+
+```{r write data}
+write.csv(Homelessness_Multi_Year, file = "Homelessness_Multi_Year_Final.csv")
+
+
+```

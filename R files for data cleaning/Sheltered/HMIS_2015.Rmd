@@ -1,0 +1,69 @@
+---
+title: "HMIS_2015"
+author: "Paul Beeman"
+date: "7/17/2018"
+output: html_document
+---
+
+```{r }
+HMIS_Clean_2015 <- data.frame(Ethnicity = recode(HMIS_2015$Ethnicity_r, "Asian American/PI" = "Other Ethnicity", "Other" ="Other Ethnicity"))
+
+HMIS_Clean_2015$Race_Recode <- recode(HMIS_2015$Race_r, "Asian American/PI" = "Other Ethnicity", "Other" = "Other Ethnicity")
+```
+
+```{r}
+HMIS_Clean_2015$Veteran <- recode(trimws(as.character(HMIS_2015$veteran_2)), "Yes" = 1, "No" = 0, .default =  2, .missing = 2) 
+
+```
+
+```{r chronic variables}
+
+HMIS_Clean_2015$Chronic_Time <- recode(trimws(HMIS_2015$chronTime), "No" = 0, "Yes" =1, .default = 0)
+
+HMIS_Clean_2015$Chronic_Condition <- ifelse(trimws(HMIS_2015$MentalHealthProblem_LongDura) == "Yes" | trimws(HMIS_2015$PhysicalDisability) == "Yes" | trimws(HMIS_2015$DevelopmentalDisability) == "Yes" | trimws(HMIS_2015$SubstanceAbuse) == "Yes", 1, 0)
+
+HMIS_Clean_2015$Chronic <- ifelse(HMIS_Clean_2015$Chronic_Time + HMIS_Clean_2015$Chronic_Condition ==2, 1, 0)
+
+```
+```{r adult with child}
+HMIS_Clean_2015$Adult_With_Child <- ifelse(HMIS_2015$childAdultFamRatio > 0 & HMIS_2015$age > 17, 1, 0)
+
+```
+```{r time movement}
+HMIS_Clean_2015$Times_Hmls_3yrs <- recode(trimws(HMIS_2015$NumberOftimesHomeless), "1 (homeless only this time)" ="1 time", "2" = "2 to 3 times", "3" = "2 to 3 times", "4 or more" = "4 or more times", "At least 4 episodes" = "4 or more times", "Less than 4 episodes" = "Less than 4- Unspecified", .default = "Unknown")
+
+HMIS_Clean_2015$Current_Stint_Duration <- gsub("month|months|-1", " ", HMIS_2015$MonthsContinuouslyHomeless)
+
+HMIS_Clean_2015$Current_Stint_Duration <- as.numeric(HMIS_Clean_2015$Current_Stint_Duration)
+
+HMIS_Clean_2015$Current_Stint_Duration <- ifelse(HMIS_Clean_2015$Current_Stint_Duration > 11, "12+ Months", ifelse(HMIS_Clean_2015$Current_Stint_Duration > 4, "4-11 months", ifelse(HMIS_Clean_2015$Current_Stint_Duration >=1, "1-3 months", ifelse(HMIS_Clean_2015$Current_Stint_Duration == 0, "Up to 1 Month", "Unknown"))))
+
+HMIS_Clean_2015$Current_Stint_Duration[is.na(HMIS_Clean_2015$Current_Stint_Duration)] <- "Unknown"
+```
+
+```{r DV}
+HMIS_Clean_2015$Physical_Sexual_Abuse <- recode(trimws(as.character(HMIS_2015$domViol)), "Yes" = 1, "No" = 0, .default =  2, .missing = 2) 
+
+
+```
+
+```{r disabilities}
+HMIS_Clean_2015$Physical_Disability <- recode(as.character(HMIS_2015$physical), "Yes" = 1, "No" = 0, .default =  2, .missing = 2) 
+
+HMIS_Clean_2015$Mental_Illness <- ifelse(trimws(HMIS_2015$MentalHealthProblem) == "Yes", 1,0)
+
+HMIS_Clean_2015$Drug_Abuse <- as.numeric(grepl("Drug Abuse Only|Both Drug and Alcohol Abuse", HMIS_2015$subsCombOld))
+
+HMIS_Clean_2015$Alcohol_Abuse <- as.numeric(grepl("Alcohol Abuse Only|Both Drug and Alcohol Abuse", HMIS_2015$subsCombOld))
+
+HMIS_Clean_2015$Drug_Alcohol_History <- ifelse(HMIS_Clean_2015$Drug_Abuse + HMIS_Clean_2015$Alcohol_Abuse > 0, 1,0) 
+
+HMIS_Clean_2015$HIV_Postive <- recode(trimws(as.character(HMIS_2015$hiv)), "Yes" = 1, "No" = 0, .default =  2, .missing = 2)
+
+```
+
+```{r}
+View(HMIS_Clean_2015)
+
+
+```

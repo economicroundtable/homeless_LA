@@ -1,0 +1,50 @@
+---
+title: "HMIS 2013"
+author: "Paul Beeman"
+date: "7/17/2018"
+output: html_document
+---
+
+```{r age}
+HMIS_Clean_2013 <- data.frame(Birth_Year = 2013 - as.numeric(as.character(HMIS_2013$Age)))
+
+
+```
+
+```{r gender}
+HMIS_Clean_2013$Gender <- recode(trimws(HMIS_2013$Gender1), "Female" = "Female", "Male" = "Male", .missing = "Unknown")
+
+```
+
+```{r vet}
+HMIS_Clean_2013$Veteran <- recode(as.character(trimws(HMIS_2013$Veteran)), "No" = 0, "Yes" = 1, .missing = 2)
+
+```
+
+```{r chronic variables}
+#condition
+HMIS_Clean_2013$Chronic_Condition <- ifelse(trimws(HMIS_2013$Disabled) == "Yes" | trimws(HMIS_2013$MentallyIll) == "Yes" | trimws(HMIS_2013$Substance_Abuser) == "Yes", 1, 0)
+
+#time
+HMIS_Clean_2013$Chronic_Time <- ifelse(trimws(HMIS_2013$QK2124) == "Yes"|trimws(HMIS_2013$QK2125) == "At least 4 episodes", 1, 0)
+
+HMIS_Clean_2013$Chronic <- ifelse(HMIS_Clean_2013$Chronic_Condition + HMIS_Clean_2013$Chronic_Time == 2, 1, 0)
+
+```
+```{r child}
+HMIS_Clean_2013$Adult_With_Child <- ifelse(grepl("parent", HMIS_2013$FamilyStatus) == TRUE, 1,0)
+
+```
+
+```{r time movement}
+HMIS_Clean_2013$Current_Stint_Duration <- ifelse(grepl("y", HMIS_2013$QK2124, ignore.case = TRUE), "12+ months", ifelse(grepl("Know|Refused|None",HMIS_2013$QK2124, ignore.case = TRUE), "Unknown", ifelse(nchar(trimws(HMIS_2013$QK2124))<1, "Unknown", "less than 12 months- unspecified")))
+
+HMIS_Clean_2013$Times_Hmls_Past_3yrs <- ifelse(grepl("At least", HMIS_2013$QK2125), "4 or more times", ifelse(grepl("Less", HMIS_2013$QK2125), "Less than 4- Unspecified", "Unknown"))
+
+```
+
+```{r view}
+View(HMIS_Clean_2013)
+
+
+```

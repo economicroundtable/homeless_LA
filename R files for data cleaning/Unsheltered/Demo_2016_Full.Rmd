@@ -1,0 +1,72 @@
+---
+title: "Demo_2016_Full"
+author: "Paul Beeman"
+date: "7/25/2018"
+output: html_document
+---
+
+```{r}
+blah_matrix <- matrix(rep(NA, nrow(Demo_Youth_2016)*ncol(Demo_2016_Final)), nrow = nrow(Demo_Youth_2016))
+colnames(blah_matrix) <- colnames(Demo_2016_Final)
+bind_2016 <- rbind(Demo_2016_Final, blah_matrix)
+
+```
+
+```{r}
+bind_2016$Birth_Year <- c(Demo_2016_Final$Birth_Year, Demo_Youth_2016$Birth_Year)
+bind_2016$Age <- c(Demo_2016_Final$Age, Demo_Youth_2016$Age)
+```
+
+```{r}
+bind_2016$Gender <- c(Demo_2016_Final$Gender, Demo_Youth_2016$Gender)
+
+bind_2016$Sexual_Orientation <- recode(c(Demo_2016_Final$Sexual_Orientation, Demo_Youth_2016$Sexual_Orientation), "Unsure/questioning" = "Unsure / questioning")
+
+bind_2016$Sexual_Orientation <- tolower((bind_2016$Sexual_Orientation))
+
+```
+
+```{r}
+bind_2016$Ethnicity <- recode(c(Demo_2016_Final$Ethnicity, Demo_Youth_2016$Ethnicity), "Other" = "Other Ethnicity")
+
+
+bind_2016$Race_Full <- c(Demo_2016_Final$Race_Full, Demo_Youth_2016$Race_Full)
+bind_2016$Race_Recode <- c(Demo_2016_Final$Race_Recode, Demo_Youth_2016$Race_Recode)
+
+
+```
+
+```{r}
+bind_2016$Veteran <- c(Demo_2016_Final$Veteran, Demo_Youth_2016$Veteran)
+
+
+```
+
+```{r}
+bind_2016$Chronic <- c(Demo_2016_Final$Chronic, Demo_Youth_2016$Chronic)
+bind_2016$Chronic_Time <- c(Demo_2016_Final$Chronic_Time, Demo_Youth_2016$Chronic_Time)
+bind_2016$Chronic_Condition <- c(Demo_2016_Final$Chronic_Condition, Demo_Youth_2016$Chronic_Condition)
+
+
+```
+
+```{r}
+bind_2016$Current_Stint_Duration <- c(Demo_2016_Final$Current_Stint_Duration, Demo_Youth_2016$Current_Stint_Duration)
+
+bind_2016$Current_Stint_Duration_Detailed <- c(Demo_2016_Final$Current_Stint_Duration_Detailed, Demo_Youth_2016$Current_Stint_Duration_Detailed)
+
+bind_2016$Times_Homeless_3yrs <- tolower(c(Demo_2016_Final$Times_Homeless_3yrs, Demo_Youth_2016$Times_Homeless_3yrs))
+
+bind_2016$SPA <- c(Demo_2016_Final$SPA, Demo_Youth_2016$SPA)
+
+bind_2016$Census_Tract <- c(Demo_2016_Final$Census_Tract, Demo_Youth_2016$Census_Tract)
+
+bind_2016$Weights <- c(Demo_2016_Final$Weights, Demo_Youth_2016$Weights)
+
+```
+
+```{r}
+write.csv(bind_2016, file = "Demo_2016_Full_Final.csv")
+
+
+```

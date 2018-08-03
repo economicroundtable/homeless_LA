@@ -1,0 +1,562 @@
+---
+title: "Demographics 2015"
+author: "Paul Beeman"
+date: "6/26/2018"
+output: html_document
+---
+```{r libraries}
+
+library(foreign)
+library(haven)
+library(tidyverse)
+library(DT)
+```
+
+```{r data import}
+Demographics_2015 <- data.frame(cbind(sapply(read.spss("~/Documents/ERT/2015 DemographicSurvey_DataSet (3,187) 9-11-2017.sav", to.data.frame = TRUE), trimws, which="both")))
+
+demo_descriptors_2015 <-  as.list(attr(Demographics_2015, "variable.labels"))
+
+```
+
+```{r Age}
+Demographics_Clean_2015 <- data.frame(Birth_Year = as.numeric(as.character(Demographics_2015$Year)))
+Demographics_Clean_2015$Age <- as.numeric(as.character(Demographics_2015$Age))
+
+```
+
+
+
+```{r sex/gender}
+Demographics_Clean_2015$Gender <- Demographics_2015$Gender_r
+
+
+```
+
+```{r sexual orientation}
+Demographics_Clean_2015$Sexual_Orientation <- recode(trimws(Demographics_2015$SexualOrientation), "Declined - Don't Know" = "Unknown", "Unsure or questioning" = "Unsure / questioning")
+
+Demographics_Clean_2015$Sexual_Orientation[sapply(as.character(Demographics_Clean_2015$Sexual_Orientation), nchar)<1] <- "Unknown"
+
+```
+
+```{r ethnicity/race}
+
+#ethnicity
+
+Demographics_Clean_2015$Ethnicity <- recode(Demographics_2015$Ethnicity_r, "Other" = "Other Ethnicity")
+
+#Race raw data
+
+Demographics_Clean_2015$Race_Full <- Demographics_2015$Race
+
+#Race recode
+
+Demographics_Clean_2015$Race_Recode <- recode(Demographics_2015$Race_r, "Other" = "Other Ethnicity", "Missing" = "Unknown")
+
+```
+
+```{r veteran}
+#They are only interested in active duty in 2015
+military_test <- trimws(Demographics_2015$USArmedForces)
+military_test <- ifelse(military_test == "Yes", 1, ifelse(military_test == "No" | military_test == "no", 0, .1))
+
+ng <- trimws(Demographics_2015$NationalGuardorReservist)
+ng<- ifelse(ng == "Yes", 1, ifelse(ng == "No" | ng == "no", 0, .1))
+
+vetsum <- military_test + ng 
+
+Demographics_Clean_2015$Veteran <- ifelse(vetsum >= 1, 1, ifelse( vetsum == 0, 0, 2))
+
+
+```
+
+```{r observed variables}
+#Observed Physical
+Demographics_Clean_2015$Observed_Physical <- as.numeric(grepl("physical", Demographics_2015$ObservedorDetectedSigns, ignore.case = TRUE))
+
+#Observed Mental
+Demographics_Clean_2015$Observed_Mental <- as.numeric(grepl("mental", Demographics_2015$ObservedorDetectedSigns, ignore.case = TRUE))
+
+#Observed Substance Abuse
+
+Demographics_Clean_2015$Observed_Substance <- as.numeric(grepl("alcohol|drug", Demographics_2015$ObservedorDetectedSigns, ignore.case = TRUE))
+
+
+
+
+```
+
+```{r chronic variables}
+#Chronic Condition (observed or reported)
+Demographics_Clean_2015$Chronic_Condition <- ifelse(Demographics_2015$LongTermDisability == "Yes" , 1, 0)
+
+#Chronic Time
+
+Demographics_Clean_2015$Chronic_Time <- as.numeric(grepl("year", Demographics_2015$Howlonghomeless, ignore.case = TRUE)) + as.numeric(grepl("4", Demographics_2015$In12monthshowmanyepisodes)) + as.numeric(grepl("4", Demographics_2015$In3yearshowmanyepisodes))
+
+Demographics_Clean_2015$Chronic_Time <- ifelse(Demographics_Clean_2015$Chronic_Time > 0, 1, 0)
+
+#Chronic 
+
+Demographics_Clean_2015$Chronic <- Demographics_Clean_2015$Chronic_Condition + Demographics_Clean_2015$Chronic_Time
+
+Demographics_Clean_2015$Chronic <- recode(Demographics_Clean_2015$Chronic, "2" = 1, "1" = 0, "0" = 0)
+
+
+
+```
+
+```{r living with children variables}
+#Do you have a child/children? This is different than 2013 because it doesn't specify children under 18. We see a spike in the number. 
+Demographics_Clean_2015$Have_Had_Child <- ifelse(as.numeric(as.character(Demographics_2015$BiologicalChildren)) > 0, 1, 0) 
+
+Demographics_Clean_2015$Have_Had_Child[is.na(Demographics_Clean_2015$Have_Had_Child)] <- 2
+
+#Do you live with a child?
+Demographics_Clean_2015$Adult_With_Child <- as.numeric(grepl("parent", Demographics_2015$HouseholdType, ignore.case = TRUE))
+
+
+```
+
+```{r TIME/MOVEMENT VARIABLES}
+#FIRST TIME HOMELESS
+
+Demographics_Clean_2015$New_to_Homelessness <- recode(Demographics_2015$FirstTime_r, "No"=0, "Yes" =1, "Unknown" =2)
+
+Demographics_Clean_2015$New_to_Homelessness[is.na(Demographics_Clean_2015$New_to_Homelessness)] <- 2
+
+#DURATION OF CURRENT EPISODE
+#For some reason they decided to change the intervals
+Demographics_Clean_2015$Current_Stint_Duration <- recode(trimws(Demographics_2015$Howlonghomeless), "1 month or less" = "Up to 1 Month", "1 week or less" = "Up to 1 Month", "1 year or longer" = "12+ Months", "Declined - Don't Know" ="Unknown") 
+
+Demographics_Clean_2015$Current_Stint_Duration[sapply(as.character(Demographics_Clean_2015$Current_Stint_Duration), nchar)<1] <- "Unknown"
+
+Demographics_Clean_2015$Current_Stint_Duration_Detailed <- recode(trimws(as.character(Demographics_2015$Howlonghomeless)), "1 week or less" = "up to 1 week", "1 month or less" = "1-4 weeks", "1 year or longer" = "12+ months", "Declined - Don't Know" ="Unknown")
+
+Demographics_Clean_2015$Current_Stint_Duration_Detailed[is.na(Demographics_Clean_2015$Current_Stint_Duration_Detailed)] <- "Unknown"
+
+Demographics_Clean_2015$Current_Stint_Duration_Detailed[sapply(Demographics_Clean_2015$Current_Stint_Duration_Detailed, nchar) <1] <- "Unknown"
+
+
+#TOTAL TIMES HOMELESS PAST YEAR
+Demographics_Clean_2015$Times_Homeless_Past_Year <- recode(Demographics_2015$In12monthshowmanyepisodes, "(1 time,2-3 times)" = "2 to 3 times", "2 -3 times" = "2 to 3 times", "2-3 times" = "2 to 3 times", "Declined - Don't Know" = "Unknown")
+
+Demographics_Clean_2015$Times_Homeless_Past_Year[sapply(as.character(Demographics_Clean_2015$Times_Homeless_Past_Year), nchar)<1] <- "Unknown"
+
+#TOTAL TIMES HOMELESS PAST THREE YEARS
+Demographics_Clean_2015$Times_Homeless_3yrs <- recode(Demographics_2015$In3yearshowmanyepisodes, "2 -3 times" = "2 to 3 times", "2-3 times" = "2 to 3 times", "Declined - Don't Know" = "Unknown")
+
+Demographics_Clean_2015$Times_Homeless_3yrs[sapply(as.character(Demographics_Clean_2015$Times_Homeless_3yrs), nchar)<1] <- "Unknown"
+
+#SPENT ANY TIME OUTSIDE OF LA COUNTY IN THE LAST 7 DAYS?
+
+Demographics_Clean_2015$Outside_LA_County <- recode(Demographics_2015$NightsoutsideofLACounty, "(Yes,No)" = 2, "Declined-Don't know" = 2, "Declined-Don't Know" = 2, "no" = 0, "No" = 0, "Yes" = 1)
+
+Demographics_Clean_2015$Outside_LA_County[is.na(Demographics_Clean_2015$Outside_LA_County)] <- 2
+
+#Location Before current Homeless stint
+
+Demographics_Clean_2015$Location_Before_Current_Stint <- recode(trimws(Demographics_2015$Wherewereyoulivingbefore), "(Los Angeles County,Southern California)" = "Los Angeles County", "(Out of State,Foreign Country)" = "Outside of US", "Declined - Don't know" = "Unknown", "Declined/ Don't know" = "Unknown", "Foreign Country" = "Outside of US", "Other County in California" = "Other county in California", "Out of State" = "Out of state", "Southern California" = "Other county in Southern California")
+
+Demographics_Clean_2015$Location_Before_Current_Stint[sapply(as.character(Demographics_Clean_2015$Location_Before_Current_Stint), nchar)<1] <- "Unknown" 
+  
+  
+#If They answered LA county, where in LA county?
+  
+Demographics_Clean_2015$LA_Community_Before_Current_Stint <- as.character(Demographics_2015$CityorCommunity)
+
+Demographics_Clean_2015$LA_Community_Before_Current_Stint[sapply(as.character(Demographics_Clean_2015$LA_Community_Before_Current_Stint), nchar)<1] <- "Unknown/Valid Skip" 
+
+Demographics_Clean_2015$LA_Community_Before_Current_Stint[is.na(Demographics_Clean_2015$LA_Community_Before_Current_Stint)] <- "Unknown/Valid Skip" 
+
+#SPA
+Demographics_Clean_2015$SPA <- recode(Demographics_2015$SPA, "SPA 1" =1, "SPA 2" = 2, "SPA 3" = 3, "SPA 4" = 4, "SPA 5" =5, "SPA 6" =6, "SPA 7" =7, "SPA 8" = 8) 
+
+#CT
+
+Demographics_Clean_2015$Census_Tract <- Demographics_2015$CensusTract
+
+```
+
+```{r past living situation}
+#The question (question number 8) relating to living conditions in the past 6 months was too poorly worded and created too much confusion to be included in this dataset.
+
+#Make note of this in code book
+
+
+```
+
+```{r last month living situation}
+#This is before people were disqualified if they spent the majority of their time indoors so there are both indoor and outdoor locations
+#There are suspicious numbers here. Look into post-weighting in the methodology reports
+
+#OUTDOOR LOCATIONS
+Demographics_Clean_2015$Outside_Majority_Last_Month <- as.character(Demographics_2015$SpendingMostNights)
+
+Demographics_Clean_2015$Outside_Majority_Last_Month[Demographics_Clean_2015$Outside_Majority_Last_Month == "Apartment or home" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Emergency shelter" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Hospital or treatment facility" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Hospital, substance abuse or psychiatric treatment facility" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Hotel or motel" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Jail or Prison" | Demographics_Clean_2015$Outside_Majority_Last_Month == "On a couch or extra space at a home of a friend or family" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Safe Haven" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Transitional housing" | Demographics_Clean_2015$Outside_Majority_Last_Month == "With someone unknown because you needed a place to stay" | Demographics_Clean_2015$Outside_Majority_Last_Month == "Youth shelter"] <- "Indoor majority of the past month"
+
+Demographics_Clean_2015$Outside_Majority_Last_Month[sapply(as.character(Demographics_Clean_2015$Outside_Majority_Last_Month), nchar)<1] <- "Unknown"
+
+Demographics_Clean_2015$Outside_Majority_Last_Month <- recode(Demographics_Clean_2015$Outside_Majority_Last_Month, "Abandoned building or parking lot" = "Nonhabitable building or under bridge", "Bus or train stop-station-transit center or airport" = "Nonhabitable building or under bridge", "Campgrounds or woods" = "Park, beach, riverbed, woods", "Car or truck" = "Car or Truck", "Declined - Don't know" = "Unknown", "Other specify" = "Unknown", "Park - beach or riverbed" = "Park, beach, riverbed, woods", "Place not meant for human habitation" = "Other outdoor location", "Street sidewalk or alley" = "Street, sidewalk, or alley", "Unconverted garage - attic or basement" = "Nonhabitable building or under bridge", "Under bridge or overpass" = "Nonhabitable building or under bridge", "Outdoor encampment or tent" = "Outdoor encampment or tent or makeshift shelter")
+
+#INDOOR LOCATIONS
+
+Demographics_Clean_2015$Indoor_Majority_Last_Month <- as.character(Demographics_2015$SpendingMostNights)
+
+Demographics_Clean_2015$Indoor_Majority_Last_Month[Demographics_Clean_2015$Outside_Majority_Last_Month != "Indoor majority of the past month"] <- "Outdoor majority of the month"
+
+Demographics_Clean_2015$Indoor_Majority_Last_Month[Demographics_Clean_2015$Outside_Majority_Last_Month == "Unknown"] <- "Unknown"
+
+
+
+```
+
+```{r Reason for homelessness}
+#RELATIONSHIP END
+Demographics_Clean_2015$Reason_Homeless_Breakup <- as.numeric(grepl("break-up", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#CHILD SUPPORT
+
+Demographics_Clean_2015$Reason_Homeless_Child_Support <- as.numeric(grepl("Child support", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#HOUSEHOLD CONFLICT
+
+Demographics_Clean_2015$Reason_Homeless_HH_Conflict <- as.numeric(grepl("Conflicts", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#DEATH OR ILLNESS IN FAMILY 
+
+Demographics_Clean_2015$Reason_Homeless_Death_Illness_Fam <- as.numeric(grepl("Death, illness", Demographics_2015$LossofHousingReasons, ignore.case = TRUE)) 
+
+#DV
+Demographics_Clean_2015$Reason_Homeless_DV <- as.numeric(grepl("Domestic Violence", Demographics_2015$LossofHousingReasons, ignore.case = TRUE)) 
+
+#FAMILY HOMELESSNESS
+Demographics_Clean_2015$Reason_Homeless_Family_Hmls <- as.numeric(grepl("Family Homelessness", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#EVICTION
+
+Demographics_Clean_2015$Reason_Homeless_Eviction <- as.numeric(grepl("Eviction", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#KICKED OUT DUE TO SEXUAL ORIENTATION
+
+Demographics_Clean_2015$Reason_Homeless_Sexual_Orientation <- as.numeric(grepl("orientation", Demographics_2015$LossofHousingReasons, ignore.case = TRUE)) 
+
+#LEFT OR AGED OUT OF FOSTER CARE
+
+Demographics_Clean_2015$Reason_Homeless_Foster_Care <- as.numeric(grepl("foster", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#MEDICAL
+
+Demographics_Clean_2015$Reason_Homeless_Medical <- as.numeric(grepl("medical", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#MENTAL 
+
+Demographics_Clean_2015$Reason_Homeless_Mental <- as.numeric(grepl("mental", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#NO FRIENDS OR FAMILY AVAILABLE TO HELP
+
+Demographics_Clean_2015$Reason_Homeless_No_Fam <- as.numeric(grepl("no friends", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#RELEASED FROM TREATMENT CENTER/HOSPITAL (somewhat redundant)
+
+Demographics_Clean_2015$Reason_Homeless_Released_Treatment <- as.numeric(grepl("hospital", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#RECENT IMMIGRATION
+
+Demographics_Clean_2015$Reason_Homeless_Immigration <- as.numeric(grepl("immigration", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#RELEASED FROM JAIL OR PRISON
+
+Demographics_Clean_2015$Reason_Homeless_Jail_Prison <- as.numeric(grepl("jail", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#DRUGS/ALCOHOL
+
+Demographics_Clean_2015$Reason_Homeless_Subs_Abuse <- as.numeric(grepl("substance", Demographics_2015$LossofHousingReasons, ignore.case = TRUE))
+
+#TIMED OUT OR LEFT PREVIOUS HOUSING SITUATION
+
+Demographics_Clean_2015$Reason_Previous_Housing_Program <- as.numeric(grepl("timed out", Demographics_2015$LossofHousingReasons, ignore.case = TRUE)) 
+
+#JOB
+
+Demographics_Clean_2015$Reason_Homeless_Job <- as.numeric(grepl("unemployment", Demographics_2015$LossofHousingReasons, ignore.case = TRUE)) 
+
+
+```
+
+```{r Physical/Sexual Abuse}
+Demographics_Clean_2015$Physical_Sexual_Abuse <- recode(trimws(Demographics_2015$DomesticViolence), "Declined - Don't know" = 2, "no" = 0, "No" = 0, "Yes" = 1)
+
+Demographics_Clean_2015$Physical_Sexual_Abuse[is.na(Demographics_Clean_2015$Physical_Sexual_Abuse)] <- 2
+
+```
+
+```{r turned away from shelter reason}
+#Have you ever been turned away from a shelter (this is a different question from 2011 and 2013)
+Demographics_Clean_2015$Turned_Away_Ever <- recode(trimws(Demographics_2015$DeniedAccess), "(Yes,No)" = 2, "no" = 0, "No"= 0, "Yes" = 1)
+
+
+Demographics_Clean_2015$Turned_Away_Ever[is.na(Demographics_Clean_2015$Turned_Away_Ever)] <- 2
+
+#Turned Away Reason
+
+Demographics_Clean_2015$Turned_Away_Drug_Alcohol <- as.numeric(grepl("Drug",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_Physical <- as.numeric(grepl("Phys",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_Mental <- as.numeric(grepl("mental",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_NoID <- as.numeric(grepl("No ID",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_Criminal_Record <- as.numeric(grepl("criminal",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_Had_Children <- as.numeric(grepl("children",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_Had_Pets <- as.numeric(grepl("pets",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+
+
+Demographics_Clean_2015$Turned_Away_Age_Requirement <- as.numeric(grepl("age",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_Immigration <- as.numeric(grepl("immigration",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+#no beds or timed out
+Demographics_Clean_2015$Turned_Away_No_Beds <- as.numeric(grepl("no beds",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+#lack of housing
+Demographics_Clean_2015$Turned_Away_Lack_Housing <- as.numeric(grepl("housing",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+#not former foster youth
+Demographics_Clean_2015$Turned_Away_Not_Foster <- as.numeric(grepl("foster",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+#partner or friend not allowed
+Demographics_Clean_2015$Turned_Away_Partner <- as.numeric(grepl("partner",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+
+Demographics_Clean_2015$Turned_Away_Pregnant <- as.numeric(grepl("pregnant",Demographics_2015$Whydeniedaccess, ignore.case = TRUE))
+```
+
+```{r Disabilities/Illness}
+#Have you ever had or been told by a healthcare provider you had one of these conditions?
+#This differs from 2011 where it only asks about the previous year.
+
+#Physical Disability
+Demographics_Clean_2015$Physical_Disability_Ever <- as.numeric(grepl("physical disability",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+#Physical Illness (Chronic, Ongoing)
+Demographics_Clean_2015$Physical_Illness_Ever <- as.numeric(grepl("physical illness",Demographics_2015$MedicalConditions, ignore.case = TRUE)) 
+
+#Alcohol Abuse
+Demographics_Clean_2015$Alcohol_Abuse_Ever <- as.numeric(grepl("alcohol",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+#Drug Abuse
+Demographics_Clean_2015$Drug_Abuse_Ever <- 
+as.numeric(grepl("drug",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+#Mental Illness
+Demographics_Clean_2015$Mental_Illness_Ever <-
+as.numeric(grepl("mental",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+#Severe Depression
+Demographics_Clean_2015$Severe_Depression_Ever <- as.numeric(grepl("depression",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+#PTSD
+Demographics_Clean_2015$PTSD_Ever <- as.numeric(grepl("post",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+#TRAUMATIC BRAIN INJURY (TBI)
+Demographics_Clean_2015$Traumatic_Brain_Injury_Ever <- 
+as.numeric(grepl("traumatic",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+#Developmental Disability 
+Demographics_Clean_2015$Developmental_Disability_Ever <-
+as.numeric(grepl("developmental",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+
+```
+
+```{r HIV}
+Demographics_Clean_2015$HIV_Positive <- as.numeric(grepl("HIV",Demographics_2015$MedicalConditions, ignore.case = TRUE))
+
+
+```
+```{r drugs/alcohol}
+#Catch all for drug and alcohol abuse
+
+Demographics_Clean_2015$Drug_Alcohol_History <-  as.numeric(grepl("drug|alcohol",Demographics_2015$MedicalConditions, ignore.case = TRUE)) +  as.numeric(grepl("drug|alcohol",Demographics_2015$Whydeniedaccess, ignore.case = TRUE)) +     as.numeric(grepl("drug|alcohol",Demographics_2015$LossofHousingReasons, ignore.case = TRUE)) +
+as.numeric(grepl("drug|alcohol",Demographics_2015$StableHousing, ignore.case = TRUE)) + as.numeric(grepl("drug|alcohol",Demographics_2015$ObservedorDetectedSigns, ignore.case = TRUE))
+
+Demographics_Clean_2015$Drug_Alcohol_History <- ifelse(Demographics_Clean_2015$Drug_Alcohol_History > 0, 1, 0)
+
+
+```
+```{r employment status/student}
+
+
+Demographics_Clean_2015$Day_Labor <- as.numeric(grepl("Day Labor",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Unable_To_Work_Disability <- as.numeric(grepl("Disabled",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Full_Time <- as.numeric(grepl("Full-time",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Part_Time <- as.numeric(grepl("Part-time",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Panhandling <- as.numeric(grepl("panhandling",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Recycling <- as.numeric(grepl("Recycling",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Seasonal <- as.numeric(grepl("seasonal",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Unemployed_Looking <- as.numeric(grepl("Unemployed actively looking for work",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Unemployed_Not_Looking <- as.numeric(grepl("Unemployed not actively looking for work",Demographics_2015$Employment, ignore.case = TRUE))
+
+Demographics_Clean_2015$Student_Vocational <- Demographics_2015$EducationalProgram
+
+Demographics_Clean_2015$Student_Vocational[sapply(as.character(Demographics_Clean_2015$Student_Vocational), nchar)<1] <- "None of the above"
+
+Demographics_Clean_2015$Student_Vocational <- recode(Demographics_Clean_2015$Student_Vocational, "(GED prep,None of the above)" = "None of the above", "(None of the above,Declined - Don't know)" = "None of the above", "Declined - Don't know" = "None of the above", "No schooling completed" = "None of the above")
+
+Demographics_Clean_2015$Student_Vocational <- recode(Demographics_Clean_2015$Student_Vocational, "None of the above" = 0)
+
+Demographics_Clean_2015$Student_Vocational[is.na(Demographics_Clean_2015$Student_Vocational)] <- 1
+
+```
+
+```{r currently utilized homeless services}
+Demographics_Clean_2015$Currently_Alcohol_Drug_Counseling <- as.numeric(grepl("Alcohol or drug",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE))
+
+Demographics_Clean_2015$Currently_Case_Management <- as.numeric(grepl("case management",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE))
+
+Demographics_Clean_2015$Currently_Access_DropIn <- as.numeric(grepl("drop-in",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE))
+
+Demographics_Clean_2015$Currently_Emergency_Shelter <- as.numeric(grepl("Emergency shelter",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE))
+
+Demographics_Clean_2015$Currently_Emergency_Food <- as.numeric(grepl("Emergency food",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE))
+
+Demographics_Clean_2015$Currently_Education_Services <- as.numeric(grepl("Education services",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE))
+
+Demographics_Clean_2015$Currently_Health_Care <- as.numeric(grepl("Health Care",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE))
+
+Demographics_Clean_2015$Currently_Housing_Placement <- as.numeric(grepl("placement assistance",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE)) 
+
+Demographics_Clean_2015$Currently_Job_Training <- as.numeric(grepl("job",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE)) 
+
+Demographics_Clean_2015$Currently_Legal_Assistance <- as.numeric(grepl("legal",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE)) 
+
+Demographics_Clean_2015$Currently_Mental_Health <- as.numeric(grepl("mental",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE)) 
+
+Demographics_Clean_2015$Currently_HIV_Testing <- as.numeric(grepl("HIV",Demographics_2015$UsingServicesorPrograms, ignore.case = TRUE)) 
+```
+
+```{r current government assistance}
+Demographics_Clean_2015$Gov_Assist_CalWorks <- as.numeric(grepl("CalWorks",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_CAPI <- as.numeric(grepl("CAPI",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Child_Support <- as.numeric(grepl("Child support",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+
+Demographics_Clean_2015$Gov_Assist_Child_Insurance <- as.numeric(grepl("children's",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Food_Stamps <- as.numeric(grepl("food stamps",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_General_Relief <- as.numeric(grepl("general relief",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Health_Way_LA <- as.numeric(grepl("Health way",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_MediCal <- as.numeric(grepl("medicaid",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Medicare <- as.numeric(grepl("medicare",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Rental <- as.numeric(grepl("section 8",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_SSI_SSD <- as.numeric(grepl("SSI/SSDI",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Social_Security <- as.numeric(grepl("Social Security",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Unemployment <- as.numeric(grepl("Unemployment",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Vet_Disability_Payment <- as.numeric(grepl("Veteran's Disability",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Vet_Other_Benefit <- as.numeric(grepl("Veteran Benefits",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Vet_Pension <- as.numeric(grepl("Veteran's Pension",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+
+Demographics_Clean_2015$Gov_Assist_Women_Infants_Children <- as.numeric(grepl("WIC",Demographics_2015$GovernmentAssistance, ignore.case = TRUE))
+```
+
+```{r education level}
+Demographics_Clean_2015$School_Complete <- as.character(Demographics_2015$EducationalAttainment)
+Demographics_Clean_2015$School_Complete[grepl(",", Demographics_2015$EducationalAttainment)] <- "Unknown"
+
+Demographics_Clean_2015$School_Complete[sapply(as.character(Demographics_Clean_2015$School_Complete), nchar)<1] <- "Unknown"
+
+Demographics_Clean_2015$School_Complete <- recode(Demographics_Clean_2015$School_Complete, "High School" = "Unknown", "High School Diploma" = "High school diploma", "12th grade no diploma" = "12th grade, no diploma", "Graduate Degree" = "Graduate school", "College Degree" = "Bachelor's degree", "Declined - Don't know" = "Unknown", "Some college completed" = "Some college")
+
+
+
+```
+
+```{r legal systems}
+# Foster Care
+
+Demographics_Clean_2015$Foster_Care_Involvement <- as.numeric(grepl("Foster",Demographics_2015$SystemsInvolvement, ignore.case = TRUE))
+
+#Juvenile Detention or Probation Camp
+
+Demographics_Clean_2015$Juvenile_Detention_Involvement <- as.numeric(grepl("Juvenile",Demographics_2015$SystemsInvolvement, ignore.case = TRUE))
+
+#Jail or Prison
+
+Demographics_Clean_2015$Jail_Prison_Involvement <- as.numeric(grepl("Jail",Demographics_2015$SystemsInvolvement, ignore.case = TRUE))
+
+#Adult Probation
+
+Demographics_Clean_2015$Adult_Probation_Involvement <- 
+as.numeric(grepl("adult probation",Demographics_2015$SystemsInvolvement, ignore.case = TRUE))
+
+#Released from a correctional institution in the past 12 months 
+Demographics_Clean_2015$Justice_System_Past_Year <- recode(Demographics_2015$ReleasedfromJail, "no" = 0, "No" = 0, "Yes" = 1, "(Yes,No)" = 2)
+
+Demographics_Clean_2015$Justice_System_Past_Year[is.na(Demographics_Clean_2015$Justice_System_Past_Year)] <- 2
+
+#Housing services offered in prison
+Demographics_Clean_2015$Justice_System_Services <- as.numeric(grepl("shelter",Demographics_2015$ProvidedResources, ignore.case = TRUE))
+
+#Tickets related to homelessness (camping, jaywalking, loitering, etc)
+Demographics_Clean_2015$Homeless_Ticketed <- as.character(Demographics_2015$Ticketed)
+
+
+Demographics_Clean_2015$Homeless_Ticketed[sapply(as.character(Demographics_Clean_2015$Homeless_Ticketed), nchar)<1] <- "Declined/Don't know"
+
+Demographics_Clean_2015$Homeless_Ticketed[grepl("Declined", Demographics_Clean_2015$Homeless_Ticketed)] <- "2"
+
+Demographics_Clean_2015$Homeless_Ticketed[grepl("None", Demographics_Clean_2015$Homeless_Ticketed)] <- "0"
+
+Demographics_Clean_2015$Homeless_Ticketed[Demographics_Clean_2015$Homeless_Ticketed != "2" & Demographics_Clean_2015$Homeless_Ticketed != "0"] <- "1"
+
+
+
+```
+```{r weights}
+Demographics_Clean_2015$ID <- Demographics_2015$ID
+Demographics_Clean_2015 <- left_join(Demographics_Clean_2015, Weights_2015, by = "ID")
+Demographics_Clean_2015 <- Demographics_Clean_2015[,!(names(Demographics_Clean_2015) %in% c("ID"))]
+
+Demographics_Clean_2015$Weights <- as.numeric(as.character(Demographics_Clean_2015$Weights))
+
+
+
+
+```
+
+```{r write data}
+write.csv(Demographics_Clean_2015, file = "Demo_2015_Final.csv")
+
+
+```
+
+```{r view data table}
+datatable(Demographics_Clean_2015)
+
+```

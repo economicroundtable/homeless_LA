@@ -1,0 +1,625 @@
+---
+title: "Demographics 2016"
+author: "Paul Beeman"
+date: "6/29/2018"
+output: html_document
+---
+```{r libraries}
+
+library(foreign)
+library(haven)
+library(tidyverse)
+
+```
+
+```{r data import}
+library(readxl)
+Demographics_2016_raw <- read_excel("~/Documents/ERT/2016 General Demographic Survey.xlsx", 
+    sheet = "2016 Raw Survey Data")
+
+Demographics_2016_raw <- arrange(Demographics_2016_raw, ID)
+
+Demographics_2016_recode <- read_excel("~/Documents/ERT/2016 General Demographic Survey.xlsx", 
+    sheet = "2016 Survey Data for Analyses")
+
+Demographics_2016_recode <- arrange(Demographics_2016_recode, ID)
+
+Demographics_2016_ERT <- data.frame(cbind(sapply(read.spss("~/Documents/ERT/2016 General Demographic Survey recoded 1rpp (5,282) 1-28-2018.sav", to.data.frame = TRUE), trimws, which="both")))
+
+Demographics_2016_ERT <- Demographics_2016_ERT[Demographics_2016_ERT$Person == "Person 1",]
+
+Demographics_2016_ERT$ID <- as.numeric(as.character(Demographics_2016_ERT$ID))
+
+Demographics_2016_ERT <- arrange(Demographics_2016_ERT, ID)
+```
+
+
+
+```{r Age}
+Demographics_Clean_2016 <- data.frame(Birth_Year = 2016-as.integer(Demographics_2016_recode$age))
+Demographics_Clean_2016$Age <- as.numeric(as.character(Demographics_2016_recode$age))
+
+```
+
+
+
+```{r sex/gender}
+Demographics_Clean_2016$Gender <- recode(trimws(Demographics_2016_raw$rawGenderIdentity), "Declined/Don’t know" = "Unknown")
+
+```
+
+```{r sexual orientation}
+Demographics_Clean_2016$Sexual_Orientation <- recode(trimws(Demographics_2016_raw$rawSexualOrientation), "Gay or Lesbian" = "Gay or lesbian","Unsure/ Questioning" = "Unsure / questioning", "Declined/Don’t know" ="Unknown")
+
+```
+
+```{r Ethnicity}
+#Ethnicity
+Demographics_Clean_2016$Ethnicity <- Demographics_2016_ERT$Ethnicity_r
+
+#Race raw data
+Demographics_Clean_2016$Race_Full <- Demographics_2016_recode$race
+
+#Race recode
+Demographics_Clean_2016$Race_Recode <- 
+ifelse(!is.na(Demographics_2016_raw$rawRaceBlack), "African American", ifelse(!is.na(Demographics_2016_raw$rawRaceIndianAlaskan), "Other", ifelse(!is.na(Demographics_2016_raw$rawRaceAsian), "Other Ethnicity", ifelse(!is.na(Demographics_2016_raw$rawRaceHawaiian), "Other Ethnicity", ifelse(!is.na(Demographics_2016_raw$rawRaceMultipleOther), "Other Ethnicity", ifelse(!is.na(Demographics_2016_raw$rawRaceWhite), "European American", "Unknown"))) ))) 
+  
+Demographics_Clean_2016$Race_Recode <- recode(Demographics_Clean_2016$Race_Recode, "Other" = "Other Ethnicity")
+```
+
+```{r Veteran}
+#Veteran (known or unknown discharge status)
+Demographics_Clean_2016$Veteran <- recode(trimws(as.character(Demographics_2016_ERT$Veteran)), "Declined/Don’t know" = 2, "No" = 0, "Yes" =1)
+
+```
+
+```{r chronic variables}
+#Chronic
+Demographics_Clean_2016$Chronic <- recode(Demographics_2016_recode$chronic, "Chronic" = 1, "Other" = 0)
+
+#Chronic Time
+Demographics_Clean_2016$Chronic_Time <- recode(Demographics_2016_recode$chronTime, "Yes" = 1, "No" = 0)
+
+#Chronic Conditions
+Demographics_Clean_2016$Chronic_Condition <- recode(Demographics_2016_recode$chronCond, "Yes" =1, "No" =0)
+
+
+```
+
+```{r Live with child variable}
+Demographics_Clean_2016$Adult_With_Child <- ifelse(as.double(Demographics_2016_recode$childAdultFamRatio) > 0, 1, 0)
+
+Demographics_Clean_2016$Adult_With_Child[is.na(Demographics_Clean_2016$Adult_With_Child)] <- 0
+
+
+```
+
+```{r TIME/MOVEMENT VARIABLES}
+
+Demographics_2016_ERT$HmlsYears[is.na(Demographics_2016_ERT$HmlsYears)] <- 0
+Demographics_2016_ERT$HmlsMonths[is.na(Demographics_2016_ERT$HmlsMonths)] <- 0
+Demographics_2016_ERT$HmlsWeeks[is.na(Demographics_2016_ERT$HmlsWeeks)] <- 0
+Demographics_2016_ERT$HmlsDays[is.na(Demographics_2016_ERT$HmlsDays)] <- 0
+
+
+#Duration of Current Episode
+
+Demographics_Clean_2016$Current_Stint_Duration <- ifelse(as.numeric(as.character(Demographics_2016_ERT$HmlsYears)) >= 1, "12+ Months", ifelse(as.numeric(as.character(Demographics_2016_ERT$HmlsMonths)) >= 6, "6-11 Months", ifelse(as.numeric(as.character(Demographics_2016_ERT$HmlsMonths)) >= 4, "4-5 Months", ifelse(as.numeric(as.character(Demographics_2016_ERT$HmlsMonths)) >= 1, "1-3 Months", ifelse(as.numeric(as.character(Demographics_2016_ERT$HmlsWeeks)) >= 1, "Up to 1 Month", ifelse(as.numeric(as.character(Demographics_2016_ERT$HmlsDays)) >=1, "Up to 1 Month", "Unknown"))))))
+
+#Fine grain current episode
+
+Demographics_2016_raw$rawHowLongHomelessThisTimeDays[is.na(Demographics_2016_raw$rawHowLongHomelessThisTimeDays)] <- 0
+
+Demographics_2016_raw$rawHowLongHomelessThisTimeWeeks[is.na(Demographics_2016_raw$rawHowLongHomelessThisTimeWeeks)] <- 0
+
+Demographics_2016_raw$rawHowLongHomelessThisTimeMonths[is.na(Demographics_2016_raw$rawHowLongHomelessThisTimeMonths)] <- 0
+
+Demographics_2016_raw$rawHowLongHomelessThisTimeYears[is.na(Demographics_2016_raw$rawHowLongHomelessThisTimeYears)] <- 0
+
+Demographics_2016_raw$rawHowLongHomelessThisTimeYears[Demographics_2016_raw$rawHowLongHomelessThisTimeYears == 2006] <- 10
+
+Demographics_Clean_2016$Current_Stint_Duration_Detailed <- Demographics_2016_raw$rawHowLongHomelessThisTimeDays + Demographics_2016_raw$rawHowLongHomelessThisTimeWeeks * 7 + Demographics_2016_raw$rawHowLongHomelessThisTimeMonths * 30 + Demographics_2016_raw$rawHowLongHomelessThisTimeYears * 365
+
+#Total Times Homeless in the Past Three Years (number of times you have been housed and homeless again)
+
+Demographics_Clean_2016$Times_Homeless_3yrs <- recode(Demographics_2016_raw$rawInPast3YrsNumEpisodesHomeless, "Declined/Don’t know" = "Unknown", "1 time" = "1 Time", "2 to 3 times" = "2 to 3 Times", "4 or more times" = "4 or More Times", "0 times (not been housed in the last 3 years)" = "0 Times") 
+
+Demographics_Clean_2016$Times_Homeless_3yrs[is.na(Demographics_Clean_2016$Times_Homeless_3yrs)] <- "Unknown"
+
+#This line of code would make sure that people who said they were homeless for 3 years or more in thier current stint are not also saying they have been homeless multiple times over the past three year. Should we do 4 years because people could be rounding up?
+
+#Demographics_Clean_2016$Times_Homeless_3yrs[as.numeric(as.character(Demographics_2016_ERT$HmlsYears)) >= 3] <- "0 times (not been housed in the last 3 years)"
+
+#Total Times Homeless in the Past Year (housed and then homeless again)
+#This question is not present in 2016
+
+#First Time Homeless (excluding chronically homeless)?
+Demographics_Clean_2016$New_to_Homelessness <- recode(Demographics_2016_raw$rawFirstTimeHomeless, "Declined/Dpn't know" =2, "No" = 0, "Yes" = 1)
+
+Demographics_Clean_2016$New_to_Homelessness[is.na(Demographics_Clean_2016$New_to_Homelessness)] <- 2
+
+#At What Age Was First Homeless Experience?
+#Could be interesting imputation
+Demographics_Clean_2016$Age_First_Homeless <- Demographics_2016_raw$rawAgeFirstTimeHomeless
+```
+```{r TIME/MOVEMENT VARIABLES continued}
+#Years in LA county?
+
+Demographics_2016_ERT$LACoYears <- as.numeric(as.character(Demographics_2016_ERT$LACoYears))
+
+Demographics_2016_ERT$LACoMonths<- as.numeric(as.character(Demographics_2016_ERT$LACoMonths))
+
+Demographics_2016_ERT$LACoWeeks<- as.numeric(as.character(Demographics_2016_ERT$LACoWeeks))
+
+Demographics_2016_ERT$LACoDays<- as.numeric(as.character(Demographics_2016_ERT$LACoDays))
+
+Demographics_2016_ERT$LACoYears[is.na(Demographics_2016_ERT$LACoYears)] <- 0
+Demographics_2016_ERT$LACoMonths[is.na(Demographics_2016_ERT$LACoMonths)] <- 0
+Demographics_2016_ERT$LACoWeeks[is.na(Demographics_2016_ERT$LACoWeeks)] <- 0
+Demographics_2016_ERT$LACoDays[is.na(Demographics_2016_ERT$LACoDays)] <- 0
+
+Demographics_Clean_2016$LA_County_Years <- as.double(as.character(Demographics_2016_ERT$LACoYears)) + as.double(as.character(Demographics_2016_ERT$LACoMonths))/12 + as.double(as.character(Demographics_2016_ERT$LACoWeeks))/52.15 + as.double(as.character(Demographics_2016_ERT$LACoDays))/365 
+ 
+Demographics_Clean_2016$LA_County_Years[Demographics_Clean_2016$LA_County_Years > 100 | Demographics_Clean_2016$LA_County_Years == 0] <- NA
+
+#Location Before current Homeless stint
+
+Demographics_Clean_2016$Location_Before_Current_Stint <- recode(trimws(Demographics_2016_raw$rawWhereLivingBeforeLostHousing), "Los Angeles County" = "Los Angeles County", "(Out of State,Foreign Country)" = "Outside of US", "Declined - Don't know" = "Unknown", "Declined/ Don't Know" = "Unknown", "Foreign Country" = "Outside of US", "Other County in California" = "Other county in California", "Out of State" = "Out of state", "Southern California (Kern, Imperial, Orange, Riverside, San Bernadino, San Diego, San Luis Obispo, or Ventura)" = "Other county in Southern California")
+
+Demographics_Clean_2016$Location_Before_Current_Stint[is.na(Demographics_Clean_2016$Location_Before_Current_Stint)] <-"Unknown"
+
+#If They answered LA county, where in LA county?
+#I am leaving this more or less raw
+  
+Demographics_Clean_2016$LA_Community_Before_Current_Stint <-  as.character(Demographics_2016_raw$rawWhereLACountyLiving)
+
+Demographics_Clean_2016$LA_Community_Before_Current_Stint[sapply(as.character(Demographics_Clean_2016$LA_Community_Before_Current_Stint), nchar)<1] <- "Unknown/Valid Skip" 
+
+Demographics_Clean_2016$LA_Community_Before_Current_Stint[is.na(Demographics_Clean_2016$LA_Community_Before_Current_Stint)] <- "Unknown/Valid Skip" 
+
+Demographics_Clean_2016$SPA <- Demographics_2016_raw$SPA
+
+Demographics_Clean_2016$Census_Tract <- Demographics_2016_raw$CensusTract
+
+```
+
+```{r past living situation}
+#The question (question number 8) relating to living conditions in the past 6 months was too poorly worded and created too much confusion to be included in this dataset.
+
+#Make note of this in code book
+
+
+```
+
+```{r last month living situation}
+#This year is when they began to disqualify people that spent the majority of their time sheltered
+
+Demographics_Clean_2016$Outside_Majority_Last_Month <- recode(Demographics_2016_raw$rawWhereSpentLast30Days, "Abandoned building or parking lot" = "Nonhabitable building or under bridge", "Bus or train stop/station, transit center or airport" = "Nonhabitable building or under bridge", "Campground or woods" = "Park, beach, riverbed, woods", "Other makeshift shelter not meant for human habitation" = "Outdoor encampment or tent or makeshift shelter", "Outdoor encampment or tent" = "Outdoor encampment or tent or makeshift shelter", "Park, beach, or riverbed" = "Park, beach, riverbed, woods", "RV or camper" = "RV or Camper", "Unconverted garage, attic, or basement" = "Nonhabitable building or under bridge", "Under bridge or overpass" = "Nonhabitable building or under bridge")
+```
+
+```{r reason for homelessness}
+#DV
+Demographics_Clean_2016$Reason_Homeless_DV <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseDV))
+
+Demographics_Clean_2016$Reason_Homeless_DV[is.na(Demographics_Clean_2016$Reason_Homeless_DV)] <- 0
+
+#DRUGS/ALCOHOL
+Demographics_Clean_2016$Reason_Homeless_Subs_Abuse <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseSubstanceAbuse))
+
+Demographics_Clean_2016$Reason_Homeless_Subs_Abuse[is.na(Demographics_Clean_2016$Reason_Homeless_Subs_Abuse)] <- 0
+
+#MENTAL 
+
+Demographics_Clean_2016$Reason_Homeless_Mental <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseMentalHealth))
+
+Demographics_Clean_2016$Reason_Homeless_Mental[is.na(Demographics_Clean_2016$Reason_Homeless_Mental)] <- 0
+
+#MEDICAL
+
+Demographics_Clean_2016$Reason_Homeless_Medical <- as.numeric(as.factor(Demographics_2016_raw$rawLostHousePhysicalllness))
+
+Demographics_Clean_2016$Reason_Homeless_Medical[is.na(Demographics_Clean_2016$Reason_Homeless_Medical)] <- 0 
+
+#JOB
+
+Demographics_Clean_2016$Reason_Homeless_Job <- 
+as.numeric(as.factor(Demographics_2016_raw$rawLostHouseUnemployment))
+
+Demographics_Clean_2016$Reason_Homeless_Job[is.na(Demographics_Clean_2016$Reason_Homeless_Job)] <- 0 
+
+#RELATIONSHIP END
+Demographics_Clean_2016$Reason_Homeless_Breakup <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseBreakup))
+
+Demographics_Clean_2016$Reason_Homeless_Breakup[is.na(Demographics_Clean_2016$Reason_Homeless_Breakup)] <- 0 
+
+#CHILD SUPPORT
+
+Demographics_Clean_2016$Reason_Homeless_Child_Support <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseChildSupport))
+
+Demographics_Clean_2016$Reason_Homeless_Child_Support[is.na(Demographics_Clean_2016$Reason_Homeless_Child_Support)] <- 0
+
+#HOUSEHOLD CONFLICT
+
+Demographics_Clean_2016$Reason_Homeless_HH_Conflict <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseConflicts))
+
+Demographics_Clean_2016$Reason_Homeless_HH_Conflict[is.na(Demographics_Clean_2016$Reason_Homeless_HH_Conflict)] <- 0
+
+#DEATH OR ILLNESS IN FAMILY 
+
+Demographics_Clean_2016$Reason_Homeless_Death_Illness_Fam <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseDeathIllness))
+
+Demographics_Clean_2016$Reason_Homeless_Death_Illness_Fam[is.na(Demographics_Clean_2016$Reason_Homeless_Death_Illness_Fam)] <- 0
+
+#EVICTION
+
+Demographics_Clean_2016$Reason_Homeless_Eviction <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseEviction))
+
+Demographics_Clean_2016$Reason_Homeless_Eviction[is.na(Demographics_Clean_2016$Reason_Homeless_Eviction)] <- 0 
+
+#KICKED OUT DUE TO SEXUAL ORIENTATION
+
+Demographics_Clean_2016$Reason_Homeless_Sexual_Orientation <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseKickedOutLGBTQ))
+
+Demographics_Clean_2016$Reason_Homeless_Sexual_Orientation[is.na(Demographics_Clean_2016$Reason_Homeless_Sexual_Orientation)] <- 0
+
+#LEFT OR AGED OUT OF FOSTER CARE
+
+Demographics_Clean_2016$Reason_Homeless_Foster_Care <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseFosterCare))
+
+Demographics_Clean_2016$Reason_Homeless_Foster_Care[is.na(Demographics_Clean_2016$Reason_Homeless_Foster_Care)] <- 0
+
+#NO FRIENDS OR FAMILY AVAILABLE TO HELP
+
+Demographics_Clean_2016$Reason_Homeless_No_Fam <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseNoFriendsFam))
+
+Demographics_Clean_2016$Reason_Homeless_No_Fam[is.na(Demographics_Clean_2016$Reason_Homeless_No_Fam)] <- 0
+
+#RECENT IMMIGRATION
+
+Demographics_Clean_2016$Reason_Homeless_Immigration <- 
+as.numeric(as.factor(Demographics_2016_raw$rawLostHouseImmigration))
+
+Demographics_Clean_2016$Reason_Homeless_Immigration[is.na(Demographics_Clean_2016$Reason_Homeless_Immigration)] <- 0
+
+#RELEASED FROM TREATMENT CENTER/HOSPITAL (somewhat redundant)
+
+Demographics_Clean_2016$Reason_Homeless_Released_Treatment <- 
+as.numeric(as.factor(Demographics_2016_raw$rawLostHouseImmigration))
+
+Demographics_Clean_2016$Reason_Homeless_Released_Treatment[is.na(Demographics_Clean_2016$Reason_Homeless_Released_Treatment)] <- 0 
+
+#RELEASED FROM JAIL OR PRISON
+
+Demographics_Clean_2016$Reason_Homeless_Jail_Prison <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseJailPrison))
+
+Demographics_Clean_2016$Reason_Homeless_Jail_Prison[is.na(Demographics_Clean_2016$Reason_Homeless_Jail_Prison)] <- 0
+
+#TIMED OUT OR LEFT PREVIOUS HOUSING SITUATION
+
+Demographics_Clean_2016$Reason_Homeless_Previous_Housing_Program <- as.numeric(as.factor(Demographics_2016_raw$rawLostHousePrevHousingProg))
+
+Demographics_Clean_2016$Reason_Homeless_Previous_Housing_Program[is.na(Demographics_Clean_2016$Reason_Homeless_Previous_Housing_Program)] <- 0
+
+#FAMILY HOMELESSNESS
+Demographics_Clean_2016$Reason_Homeless_Family_Hmls <- as.numeric(as.factor(Demographics_2016_raw$rawLostHouseFamHomeless))
+
+Demographics_Clean_2016$Reason_Homeless_Family_Hmls[is.na(Demographics_Clean_2016$Reason_Homeless_Family_Hmls)] <- 0 
+```
+
+```{r Physical/Sexual Abuse}
+#Have you been physically or sexually abused by a relative or someone you have lived with?
+
+Demographics_Clean_2016$Physical_Sexual_Abuse <- recode(Demographics_2016_raw$rawPhysicallyOrSexuallyAbused, "No" = 0, "Yes" = 1, "Declined/ Don't Know" =2)
+
+Demographics_Clean_2016$Physical_Sexual_Abuse[is.na(Demographics_Clean_2016$Physical_Sexual_Abuse)] <- 0 
+
+
+```
+
+```{r turned away from shelter reason}
+#question not present in 2016
+
+```
+
+```{r Disabilities/Illness}
+#Physical Disability
+Demographics_Clean_2016$Physical_Disability_Ever <-  as.numeric(as.factor(Demographics_2016_raw$rawPhysicalDisability))
+
+Demographics_Clean_2016$Physical_Disability_Ever[is.na(Demographics_Clean_2016$Physical_Disability_Ever)] <- 0 
+
+#Physical Illness (Chronic, Ongoing)
+Demographics_Clean_2016$Physical_Illness_Ever <- 
+as.numeric(as.factor(Demographics_2016_raw$rawPhysicalIllness))
+
+Demographics_Clean_2016$Physical_Illness_Ever[is.na(Demographics_Clean_2016$Physical_Illness_Ever)] <- 0 
+
+#Alcohol Abuse
+Demographics_Clean_2016$Alcohol_Abuse_Ever <- as.numeric(as.factor(Demographics_2016_raw$rawAlcoholAbuse))
+
+Demographics_Clean_2016$Alcohol_Abuse_Ever[is.na(Demographics_Clean_2016$Alcohol_Abuse_Ever)] <- 0 
+
+#Drug Abuse
+Demographics_Clean_2016$Drug_Abuse_Ever <- as.numeric(as.factor(Demographics_2016_raw$rawDrugAbuse))
+
+Demographics_Clean_2016$Drug_Abuse_Ever[is.na(Demographics_Clean_2016$Drug_Abuse_Ever)] <- 0 
+
+#Mental Illness
+Demographics_Clean_2016$Mental_Illness_Ever <- 
+as.numeric(as.factor(Demographics_2016_raw$rawMentalIllness))
+
+Demographics_Clean_2016$Mental_Illness_Ever[is.na(Demographics_Clean_2016$Mental_Illness_Ever)] <- 0
+
+#Severe Depression
+Demographics_Clean_2016$Severe_Depression_Ever <-
+as.numeric(as.factor(Demographics_2016_raw$rawSevereDepression))
+
+Demographics_Clean_2016$Severe_Depression_Ever[is.na(Demographics_Clean_2016$Severe_Depression_Ever)] <- 0
+
+#PTSD
+Demographics_Clean_2016$PTSD_Ever <- 
+as.numeric(as.factor(Demographics_2016_raw$rawPTSD))
+
+Demographics_Clean_2016$PTSD_Ever[is.na(Demographics_Clean_2016$PTSD_Ever)] <- 0
+
+#TRAUMATIC BRAIN INJURY (TBI)
+Demographics_Clean_2016$Traumatic_Brain_Injury_Ever <- 
+as.numeric(as.factor(Demographics_2016_raw$rawTraumaticBrainInjury))
+
+Demographics_Clean_2016$Traumatic_Brain_Injury_Ever[is.na(Demographics_Clean_2016$Traumatic_Brain_Injury_Ever)] <- 0
+
+#Developmental Disability 
+Demographics_Clean_2016$Developmental_Disability_Ever <- 
+as.numeric(as.factor(Demographics_2016_raw$rawDevelopmentalDisability))
+
+Demographics_Clean_2016$Developmental_Disability_Ever[is.na(Demographics_Clean_2016$Developmental_Disability_Ever)] <- 0
+```
+
+```{r HIV}
+Demographics_Clean_2016$HIV_Positive <- 
+as.numeric(as.factor(Demographics_2016_raw$rawAIDSHIV))
+
+Demographics_Clean_2016$HIV_Positive[is.na(Demographics_Clean_2016$HIV_Positive)] <- 0  
+  
+```
+```{r drugs/alcohol}
+#Catch all for drug and alcohol abuse. Any question relating to problematic drug or alcohol abuse
+
+Demographics_Clean_2016$Drug_Alcohol_History <- as.numeric(grepl("Ongoing", Demographics_2016_raw$rawAlcoholAbuse)) + as.numeric(grepl("Ongoing", Demographics_2016_raw$rawDrugAbuse)) + as.numeric(grepl("abuse", Demographics_2016_raw$DetectSignsAlcoholDrug)) + as.numeric(grepl("substance", Demographics_2016_raw$rawLostHouseSubstanceAbuse))
+
+Demographics_Clean_2016$Drug_Alcohol_History <- ifelse(Demographics_Clean_2016$Drug_Alcohol_History > 0, 1, 0)
+
+```
+```{r employment status/student}
+#Unemployed, looking for work
+Demographics_Clean_2016$Unemployed_Looking <- 
+as.numeric(as.factor(Demographics_2016_raw$rawEmployUnempLooking))
+
+Demographics_Clean_2016$Unemployed_Looking[is.na(Demographics_Clean_2016$Unemployed_Looking)] <- 0 
+
+#Unemployed, not looking
+Demographics_Clean_2016$Unemployed_Not_Looking <- 
+as.numeric(as.factor(Demographics_2016_raw$rawEmployUnempNotLooking))
+
+Demographics_Clean_2016$Unemployed_Not_Looking[is.na(Demographics_Clean_2016$Unemployed_Not_Looking)] <- 0  
+
+
+#Day Labor
+Demographics_Clean_2016$Day_Labor <- as.numeric(as.factor(Demographics_2016_raw$rawOtherIncomeDayLabor))
+
+Demographics_Clean_2016$Day_Labor[is.na(Demographics_Clean_2016$Day_Labor)] <- 0
+
+#Full Time
+Demographics_Clean_2016$Full_Time <- 
+as.numeric(as.factor(Demographics_2016_raw$rawEmployFullTime))
+
+Demographics_Clean_2016$Full_Time[is.na(Demographics_Clean_2016$Full_Time)] <- 0
+
+#Part Time
+Demographics_Clean_2016$Part_Time <- as.numeric(as.factor(Demographics_2016_raw$rawEmployPartTime))
+
+Demographics_Clean_2016$Part_Time[is.na(Demographics_Clean_2016$Part_Time)] <- 0 
+
+#Panhandling
+Demographics_Clean_2016$Panhandling <- 
+as.numeric(as.factor(Demographics_2016_raw$rawOtherIncomePanhandling))
+
+Demographics_Clean_2016$Panhandling[is.na(Demographics_Clean_2016$Panhandling)] <- 0 
+
+#Recycling
+Demographics_Clean_2016$Recycling <- 
+as.numeric(as.factor(Demographics_2016_raw$rawOtherIncomeRecycle))
+
+Demographics_Clean_2016$Recycling[is.na(Demographics_Clean_2016$Recycling)] <- 0 
+
+#Seasonal
+Demographics_Clean_2016$Seasonal <-
+as.numeric(as.factor(Demographics_2016_raw$rawEmploySeason))
+
+Demographics_Clean_2016$Seasonal[is.na(Demographics_Clean_2016$Seasonal)] <- 0 
+
+
+```
+
+```{r currently utilized homeless services}
+#Unemployment
+Demographics_Clean_2016$Gov_Assist_Unemployment <- as.numeric(as.factor(Demographics_2016_raw$rawGovAssistUnemp))
+
+Demographics_Clean_2016$Gov_Assist_Unemployment[is.na(Demographics_Clean_2016$Gov_Assist_Unemployment)] <- 0 
+
+#General Relief
+Demographics_Clean_2016$Gov_Assist_General_Relief <- as.numeric(as.factor(Demographics_2016_raw$rawGovAssistGRGA))
+
+Demographics_Clean_2016$Gov_Assist_General_Relief[is.na(Demographics_Clean_2016$Gov_Assist_General_Relief)] <- 0 
+
+#SSI/SSDI/Disability
+
+Demographics_Clean_2016$Gov_Assist_SSI_SSD <- 
+as.numeric(as.factor(Demographics_2016_raw$rawGovAssistSocSecDisability))
+
+Demographics_Clean_2016$Gov_Assist_SSI_SSD[is.na(Demographics_Clean_2016$Gov_Assist_SSI_SSD)] <- 0 
+
+# Social Security 
+
+Demographics_Clean_2016$Gov_Assist_Social_Security <- 
+as.numeric(as.factor(Demographics_2016_raw$rawGovAssistSocSecRetire))
+
+Demographics_Clean_2016$Gov_Assist_Social_Security[is.na(Demographics_Clean_2016$Gov_Assist_Social_Security)] <- 0 
+
+#Food Stamps 
+
+Demographics_Clean_2016$Gov_Assist_Food_Stamps <- as.numeric(as.factor(Demographics_2016_raw$rawGovAssistFoodStamps))
+
+Demographics_Clean_2016$Gov_Assist_Food_Stamps[is.na(Demographics_Clean_2016$Gov_Assist_Food_Stamps)] <- 0
+
+#Government assistance program for immigrants
+
+Demographics_Clean_2016$Gov_Assist_CAPI <- 
+as.numeric(as.factor(Demographics_2016_raw$rawGovAssistCAPI))
+
+Demographics_Clean_2016$Gov_Assist_CAPI[is.na(Demographics_Clean_2016$Gov_Assist_CAPI)] <- 0
+
+#Women, Infants, Children
+
+Demographics_Clean_2016$Gov_Assist_Women_Infants_Children <- 
+as.numeric(as.factor(Demographics_2016_raw$rawGovAssistWIC))
+
+Demographics_Clean_2016$Gov_Assist_Women_Infants_Children[is.na(Demographics_Clean_2016$Gov_Assist_Women_Infants_Children)] <- 0
+
+#CalWorks/TANF
+
+Demographics_Clean_2016$Gov_Assist_CalWorks <- as.numeric(as.factor(Demographics_2016_raw$rawGovAssistCalWorks))
+
+Demographics_Clean_2016$Gov_Assist_CalWorks[is.na(Demographics_Clean_2016$Gov_Assist_CalWorks)] <- 0
+
+#Medicaid/Medi-Cal
+
+Demographics_Clean_2016$Gov_Assist_MediCal <- 
+as.numeric(as.factor(Demographics_2016_raw$rawGovAssistMedicaid))
+
+Demographics_Clean_2016$Gov_Assist_MediCal[is.na(Demographics_Clean_2016$Gov_Assist_MediCal)] <- 0
+
+#Medicare
+
+Demographics_Clean_2016$Gov_Assist_Medicare <- 
+as.numeric(as.factor(Demographics_2016_raw$rawGovAssistMedicare))
+
+Demographics_Clean_2016$Gov_Assist_Medicare[is.na(Demographics_Clean_2016$Gov_Assist_Medicare)] <- 0
+
+#Vet Disability Vet_Disability_Payment
+
+Demographics_Clean_2016$Gov_Assist_Vet_Disability_Payment <- 
+as.numeric(as.factor(Demographics_2016_raw$rawGovAssistVetDisability))
+
+Demographics_Clean_2016$Gov_Assist_Vet_Disability_Payment[is.na(Demographics_Clean_2016$Gov_Assist_Vet_Disability_Payment)] <- 0
+
+#Vet Medical Center/Veteran Benefits
+
+Demographics_Clean_2016$Gov_Assist_Vet_Other_Benefit <- as.numeric(as.factor(Demographics_2016_raw$rawGovAssistVABenefits))
+
+Demographics_Clean_2016$Gov_Assist_Vet_Other_Benefit[is.na(Demographics_Clean_2016$Gov_Assist_Vet_Other_Benefit)] <- 0
+
+#Veteran Pension
+
+Demographics_Clean_2016$Gov_Assist_Vet_Pension <- as.numeric(as.factor(Demographics_2016_raw$rawGovAssistVetPension))
+
+Demographics_Clean_2016$Gov_Assist_Vet_Pension[is.na(Demographics_Clean_2016$Gov_Assist_Vet_Pension)] <- 0
+
+#Child Support or survivor's benefits
+
+Demographics_Clean_2016$Gov_Assist_Child_Support <- as.numeric(as.factor(Demographics_2016_raw$rawGovAssistChildSupport))
+
+Demographics_Clean_2016$Gov_Assist_Child_Support[is.na(Demographics_Clean_2016$Gov_Assist_Child_Support)] <- 0
+
+```
+
+```{r legal systems}
+#Foster Care
+Demographics_Clean_2016$Foster_Care_Involvement <- 
+as.numeric(as.factor(Demographics_2016_raw$rawInFosterCare))
+
+Demographics_Clean_2016$Foster_Care_Involvement[is.na(Demographics_Clean_2016$Foster_Care_Involvement)] <- 0
+
+#Juvenile Probation 
+
+Demographics_Clean_2016$Juvenile_Probation_Involvement <- 
+as.numeric(as.factor(Demographics_2016_raw$rawInJuveDetnOrProbation))
+
+Demographics_Clean_2016$Juvenile_Probation_Involvement[is.na(Demographics_Clean_2016$Juvenile_Probation_Involvement)] <- 0
+
+#Jail or Prison
+
+Demographics_Clean_2016$Jail_Prison_Involvement <-
+as.numeric(as.factor(Demographics_2016_raw$rawInJailOrPrison))
+
+Demographics_Clean_2016$Jail_Prison_Involvement[is.na(Demographics_Clean_2016$Jail_Prison_Involvement)] <- 0
+
+#Adult Probation
+
+Demographics_Clean_2016$Adult_Probation_Involvement <- 
+as.numeric(as.factor(Demographics_2016_raw$rawOnAdultProbation))
+
+Demographics_Clean_2016$Adult_Probation_Involvement[is.na(Demographics_Clean_2016$Adult_Probation_Involvement)] <- 0
+
+#Parole
+
+Demographics_Clean_2016$Parole_Involvement <- as.numeric(as.factor(Demographics_2016_raw$rawOnParole))
+
+Demographics_Clean_2016$Parole_Involvement[is.na(Demographics_Clean_2016$Parole_Involvement)] <- 0 
+
+#JUSTICE SYSTEM LAST YEAR
+
+#Released from a correctional institution in the past 12 months 
+Demographics_Clean_2016$Justice_System_Past_Year <- 
+recode(Demographics_2016_raw$rawReleasedFromJuveDetnJailPriso, "Declined/Don't Know" =2, "No" = 0, "Yes" = 1)
+
+#Homeless at the time you entered jail or prison in the past year
+Demographics_Clean_2016$Justice_System_Homeless <- recode(Demographics_2016_raw$rawHomelessBeforeAfterInCorrectI, "Before" = 1, "Both" = 1, "After" = 0, "Declined/Don't Know" = 2)
+
+Demographics_Clean_2016$Justice_System_Homeless[is.na(Demographics_Clean_2016$Justice_System_Homeless)] <- 2
+
+```
+
+```{r hospital, emergency room stays}
+#ER visits in the past year? 
+Demographics_Clean_2016$ER_Past_Year <- as.character(Demographics_2016_raw$rawNumTimesER)
+
+fourplus <- as.numeric(as.character(Demographics_2016_raw$rawNumTimesERMoreThan4))
+
+Demographics_Clean_2016$ER_Past_Year[fourplus > 3] <- "4+"
+
+#Homeless at the time you were in the ER?
+Demographics_Clean_2016$ER_Homeless <- recode(Demographics_2016_raw$rawHomelessBeforeAndAfterER, "After" = 0, "Before" = 1, "Both" =1, "Declined/Don't Know" = 2)
+
+Demographics_Clean_2016$ER_Homeless[is.na(Demographics_Clean_2016$ER_Homeless)] <-2
+
+```
+
+```{r observed variables}
+Demographics_Clean_2016$Observed_Physical <- as.numeric(grepl("Serious health", Demographics_2016_raw$DetectSignsHealth))
+
+Demographics_Clean_2016$Observed_Mental <- as.numeric(grepl("Mental", Demographics_2016_raw$DetectSignsMental))
+
+Demographics_Clean_2016$Observed_Substance <- as.numeric(grepl("abuse", Demographics_2016_raw$DetectSignsAlcoholDrug))
+```
+
+```{r weights}
+Demographics_Clean_2016$ID <- Demographics_2016_raw$ID
+
+Demographics_Clean_2016 <- inner_join(Demographics_Clean_2016, data.frame(Weights_2016), by = "ID")
+
+Demographics_Clean_2016 <- Demographics_Clean_2016[,!(names(Demographics_Clean_2016) %in% c("ID"))]
+
+```
+
+```{r write data}
+write.csv(Demographics_Clean_2016, file = "Demo_2016_Final.csv")
+
+
+```
+
+```{r view}
+
+datatable(Demographics_Clean_2016)
+
+
+```

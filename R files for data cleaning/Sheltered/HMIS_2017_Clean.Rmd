@@ -1,0 +1,279 @@
+---
+title: "HMIS_2017_Clean"
+author: "Paul Beeman"
+date: "6/25/2018"
+output: html_document
+---
+
+```{r HMIS 2017}
+HMIS_2017 <- read.spss("~/Documents/ERT/2017 Individual HMIS data (11,397) 12-3-2017.sav", to.data.frame = TRUE)
+
+HMIS_descriptors_2017 <- as.list(attr(HMIS_2017, "variable.labels"))
+
+```
+
+```{r view data}
+View(HMIS_2017)
+
+
+
+```
+
+
+```{r Age}
+HMIS_Clean_2017 <- data.frame(Birth_Year = 2017 - as.numeric(as.character(HMIS_2017$age_yrs)))
+HMIS_Clean_2017$Age <- as.numeric(as.character(HMIS_2017$age_yrs))
+```
+
+```{r application ID}
+HMIS_Clean_2017$Application_ID <- HMIS_2017$applicationID
+
+
+```
+
+```{r sex/gender}
+HMIS_Clean_2017$Gender <- recode(HMIS_2017$gender, "Other" = "Unknown", "Unknown Code" = "Unknown", "Don't Know" = "Unknown", "Null" = "Unknown", "Refused" = "Unknown")
+
+```
+
+```{r sexual orientation}
+#Only asked of young people
+
+HMIS_Clean_2017$Sexual_Orientation <- recode(HMIS_2017$sexorient, "1" = "Straight", "2" = "Gay or lesbian", "3" = "Bisexual", "4" = "Unsure / questioning", D = "Unknown", "M" = "Unknown", "N" = "Unknown", "R" = "Unknown")
+
+HMIS_Clean_2017$Sexual_Orientation[sapply(as.character(trimws(HMIS_Clean_2017$Sexual_Orientation)), nchar)<1] <- "Unknown"
+
+#This question was only supposed to be asked to people under the age of 25. That is why there are so few entries
+```
+
+```{r ethnicity/race}
+#ETHNICITY
+HMIS_Clean_2017$Ethnicity <- recode(HMIS_2017$Ethnicity, "Other" = "Other Ethnicity")
+
+#RACE FULL
+HMIS_Clean_2017$Race_Full <- HMIS_2017$race 
+
+#RACE RECODE
+HMIS_Clean_2017$Race_Recode <- ifelse(HMIS_2017$race == "European American", "European American", ifelse(HMIS_2017$race == "African American", "African American", ifelse(HMIS_2017$race == "Asian American"|HMIS_2017$race == "American Indian/Alaska Native"|HMIS_2017$race == "Pacific Islander"|HMIS_2017$race == "Multi-Race", "Other Ethnicity", "Unknown")))
+
+```
+
+```{r veteran}
+HMIS_Clean_2017$Veteran <- as.numeric(as.character(HMIS_2017$veteran))
+
+HMIS_Clean_2017$Veteran[is.na(HMIS_Clean_2017$Veteran)] <- 2
+```
+
+
+```{r TIME/MOVEMENT Variables}
+#Number of episodes in the past three years
+#Some are 0 because they came straight from a home to a shelter
+HMIS_Clean_2017$Times_Homeless_3yrs <- recode(HMIS_2017$hmls_past3yr_times, "0" = "1 Time","1" = "1 Time", "2" = "2 to 3 Times", "3" = "2 to 3 Times", "4" = "Less than 4- Unspecified", "5" = "4 or More Times", .default = "Unknown")
+
+#Duration of current stint
+#This is fairly empty because most people did not fill in thier approximate date that their current stint began 
+
+
+HMIS_Clean_2017$Current_Stint_Duration <- ifelse(as.numeric(as.character(HMIS_2017$hmls_months_obs)) >= 12, "12+ months", ifelse(as.numeric(as.character(HMIS_2017$hmls_months_obs)) >= 6, "6-11 Months", ifelse(as.numeric(as.character(HMIS_2017$hmls_months_obs)) >= 4, "4-5 Months", ifelse(as.numeric(as.character(HMIS_2017$hmls_months_obs)) > 1, "1-3 Months", ifelse(as.numeric(as.character(HMIS_2017$hmls_months_obs)) == 1, "Up to 1 Month", "Unknown")))))
+
+HMIS_Clean_2017$Current_Stint_Duration[is.na(HMIS_Clean_2017$Current_Stint_Duration)] <- "Unknown"
+
+HMIS_Clean_2017$Current_Stint_Duration <- recode(HMIS_Clean_2017$Current_Stint_Duration, "1 Month" = "1-3 Months")
+
+#Total time in months homeless past 3 years
+HMIS_Clean_2017$Total_Months_Homeless_3yrs <- recode(trimws(as.character(HMIS_2017$hmls_past3yr_months)),"12" = "12+ Months", "13" = "12+ Months", "1" = "1-3 Months","2" = "1-3 Months", "3" = "1-3 Months", "4" = "4-5 Months", "5" = "4-5 Months", "6" = "6-11 Months", "7" = "6-11 Months" , "8" ="6-11 Months", "9" ="6-11 Months", "10" = "6-11 Months", "11" = "6-11 Months","C" = "Unknown", "D" = "Unknown", "N" = "Unknown", "R" = "Unknown")
+
+HMIS_Clean_2017$Total_Months_Homeless_3yrs[sapply(HMIS_Clean_2017$Total_Months_Homeless_3yrs, nchar) < 1] <- "Unknown"
+
+
+
+```
+
+```{r past living situation}
+#Where wer you living immediately prior to entering project?
+HMIS_Clean_2017$Prior_Living_Situation <- recode(trimws(HMIS_2017$PriorLivingSituation), "1" = "Place not meant for habitation", "2" = "Emergency shelter", "3" = "Safe haven", "4" = "Transitional housing", "5" = "Hotel or motel paid for w/o emergency shelter voucher", "6" = "Permanent housing for formerly homeless persons", "7" = "Residential project or halfway house with no homeless criteria", "8" =  "Foster care home or foster care group home", "9" = "Hospital or other residential non-psychiatric medical facility", "10" = "Substance abuse treatment facility or detox center", "11" = "Psychiatric hospital or other psychiatric facility", "12" = "Long term care facility or nursing home", "13" = "Jail, prison or juvenile detention facility", "14" = "Rental by client, no ongoing housing subsidy", "15" = "Rental by client, with GPD TIP subsidy", "16" = "Rental by client, with VASH subsidy", "17" = "Rental by client, with other ongoing housing subsidy", "18" = "Owned by client, no ongoing housing subsidy", "19" ="Owned by client, with ongoing housing subsidy", "20" = "Staying or living in a family members room, apartment or house", "21" = "Staying or living in a friends room, apartment or house", "22" ="Interim Housing", .default = "Unknown")
+
+#Duration of stay in prior location
+HMIS_Clean_2017$Prior_Living_Situation_Duration <- recode(trimws(HMIS_2017$lengthstay), "1" = "One night or less", "2" = "Two to six nights", "3" = "One week or more, but less than one month", "4" = "1-3 months", "5" = "4-11 months", "6" = "12+ months", .default = "Unknown")
+
+
+
+```
+
+
+```{r chronic variables}
+#Chronic Condition
+HMIS_Clean_2017$Chronic_Condition <- HMIS_2017$chronCond
+HMIS_Clean_2017$Chronic_Condition[is.na(HMIS_2017$chronCond)] <- "2"
+HMIS_Clean_2017$Chronic_Condition <- as.numeric(HMIS_Clean_2017$Chronic_Condition)
+#Chronic Time
+
+HMIS_Clean_2017$Chronic_Time <- ifelse(HMIS_2017$usedEpisode==1 |HMIS_2017$usedLength==1, 1,0)
+HMIS_Clean_2017$Chronic_Time[is.na(HMIS_Clean_2017$Chronic_Time)] <- 2
+
+#Chronic Individual
+
+HMIS_Clean_2017$Chronic <- ifelse(HMIS_Clean_2017$Chronic_Condition == 1 & HMIS_Clean_2017$Chronic_Time == 1, 1, 0)
+HMIS_Clean_2017$Chronic[is.na(HMIS_Clean_2017$Chronic)] <- 2
+```
+
+```{r family structure}
+#Family Structure
+HMIS_Clean_2017$Family_Structure <- recode(HMIS_2017$FamilyType, "1" = "Adults Without Children", "2" = "Single Parent", "3" = "Two Parents", "4" = "Unaccompanied")
+
+#Relation to Head of household 
+HMIS_Clean_2017$Relation_To_HOH <- recode(HMIS_2017$relation_hmis, "1" = "Self", "2" ="Spouse/Partner", "3" = "Spouse/Partner", "4" ="Spouse/Partner", "5" = "Child", "6" = "Child", "7" = "Other", "8" = "Other", .default = "Unknown") 
+
+#Adult with child
+
+HMIS_Clean_2017$Adult_With_Child <- ifelse((HMIS_Clean_2017$Family_Structure == "Single Parent" | HMIS_Clean_2017$Family_Structure == "Two Parents") & HMIS_Clean_2017$Relation_To_HOH != "Child", 1, 0) 
+
+```
+
+```{r Domestic Violence}
+#Experienced Domestic Violence
+HMIS_Clean_2017$Physical_Sexual_Abuse <- recode(HMIS_2017$dv_status, "2" = 0, "3" = 1, "4" = 1, "5" = 2)
+
+HMIS_Clean_2017$Physical_Sexual_Abuse[is.na(HMIS_Clean_2017$Physical_Sexual_Abuse)] <- 2
+
+#Fleeing Violence
+HMIS_Clean_2017$Flight_From_Violence <- recode(trimws(HMIS_2017$flee_viol), "0" = 0, "1" =1, .default = 2 )
+
+
+```
+
+```{r Disabilities/Illness}
+#Do you feel you currently have a mental health problem?
+HMIS_Clean_2017$Mental_Illness <- recode(HMIS_2017$mental_yn, "0"=0, "1" = 1, .default = 2)
+
+#Do you have a physical disability?
+HMIS_Clean_2017$Physical_Disability <- recode(HMIS_2017$physical_yn, "0"=0, "1" = 1, .default = 2)
+
+#Have you ever been told that you have a learninng or developmental disability?
+HMIS_Clean_2017$Developmental_Disability <- recode(HMIS_2017$develop, "0"=0, "1" = 1, .default = 2)
+
+#HIV/AIDS
+HMIS_Clean_2017$HIV_Positive <- recode(HMIS_2017$hiv, "0"=0, "1" = 1, .default = 2)
+
+#Do you currently have a drug or alcohol problem?
+HMIS_Clean_2017$Drug_Abuse <- recode(HMIS_2017$drugs_yn, "0"=0, "1" = 1, .default = 2)
+
+HMIS_Clean_2017$Alcohol_Abuse <- recode(HMIS_2017$alcohol_yn, "0"=0, "1" = 1, .default = 2)
+
+HMIS_Clean_2017$Substance_Abuse <- ifelse(HMIS_Clean_2017$Drug_Abuse == 1| HMIS_Clean_2017$Alcohol_Abuse ==1, 1,0)
+```
+
+```{r pregnant}
+HMIS_Clean_2017$Pregnant <- recode(as.character(HMIS_2017$pregnant), "0" = 0, "1" = 1, .default = 0, .missing = 0)
+
+
+
+```
+
+```{r education}
+#Highest level of education attained
+
+HMIS_Clean_2017$School_Complete <- recode(trimws(HMIS_2017$educ_enroll), "1" = "No schooling completed" , "2" = "Less than 5th grade", "3" = "Less than 5th grade", "4" = "Grades 5-6", "5" = "Grades 7-8", "6" = "Grades 9-11", "7" = "Grades 9-11", "8" = "Grades 9-11", "9" = "Grades 9-11", "10" = "12th grade, no diploma", "11" = "GED", "12" = "High school diploma", "13" = "Some college", "14"= "Associate's degree", "15" = "Bachelor's degree" , "16" = "Graduate school", .default = "Unknown")
+
+
+
+```
+
+```{r employment}
+#Are you employed?
+
+HMIS_Clean_2017$Employed <- recode(trimws(HMIS_2017$employed), "Not employed" = 0, "Employed" = 1, .default = 2, .missing = 2)
+
+
+#HMIS_Clean_2017$Employment_Status <- recode(as.character(HMIS_2017$emp_type), "Missing" = "Unknown", "Data not collected" = "Unknown", .missing = "Unknown")
+
+HMIS_Clean_2017$Full_Time <- as.numeric(grepl("Full", HMIS_2017$emp_type))
+
+HMIS_Clean_2017$Part_Time <- as.numeric(grepl("Part", HMIS_2017$emp_type))
+
+HMIS_Clean_2017$Sporadic_Work <- as.numeric(grepl("sporadic", HMIS_2017$emp_type))
+
+HMIS_Clean_2017$Unemployed_Looking <- as.numeric(grepl("Looking for work", HMIS_2017$emp_type))
+
+HMIS_Clean_2017$Unemployed_Not_Looking <- as.numeric(grepl("Not looking for work", HMIS_2017$emp_type))
+```
+
+```{r government assistance}
+HMIS_Clean_2017$Gov_Assist_CalWorks <- recode(as.character(HMIS_2017$govasst_calworks), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Child_Insurance<- recode(as.character(HMIS_2017$govasst_chip), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Food_Stamps<- recode(as.character(HMIS_2017$govasst_food), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_General_Relief<- recode(as.character(HMIS_2017$govasst_grga), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Medicaid<- recode(as.character(HMIS_2017$govasst_mcaid), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Medicare<- recode(as.character(HMIS_2017$govasst_mcare), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Rental<- recode(as.character(HMIS_2017$govasst_temprent), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_SSI_SSD<- recode(as.character(HMIS_2017$govasst_ssidi), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Social_Security<- recode(as.character(HMIS_2017$govasst_ssret), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Unemployment<- recode(as.character(HMIS_2017$govasst_unemp), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Gov_Assist_Vet_Disability_Payment<- recode(as.character(HMIS_2017$govasst_vetdis), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Vet_Other_Benefit<- recode(as.character(HMIS_2017$govasst_vetmed), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Gov_Assist_Vet_Pension<- recode(as.character(HMIS_2017$govasst_vetpen), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+
+```
+
+```{r forms of income}
+HMIS_Clean_2017$Other_Income_Child_Support <- recode(as.character(HMIS_2017$inc_childsup), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+#HMIS_Clean_2017$Other_Income_Employment <- recode(as.character(HMIS_2017$inc_labor), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Other_Income_Unemployment_Pension <- recode(as.character(HMIS_2017$inc_pension), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Other_Income_Private_Disability <- recode(as.character(HMIS_2017$inc_privdisab), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Other_Income_Worker_Comp <- recode(as.character(HMIS_2017$inc_workcomp), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+
+HMIS_Clean_2017$Other_Income_Other <- recode(as.character(HMIS_2017$inc_other), "No" = 0, "Yes" = 1, .default = 2, .missing = 2)
+```
+
+```{r shelter info}
+HMIS_Clean_2017$Program_Name <- HMIS_2017$ProgramName
+
+HMIS_Clean_2017$Program_Type <- recode(HMIS_2017$hh_shelter_, "1" = "Emergency Shelter", "2" = "Transitional Housing", "3" = "Safe Haven", .missing = "Unknown")
+
+HMIS_Clean_2017$SPA <- HMIS_2017$SPA
+
+HMIS_Clean_2017$Census_Tract <- HMIS_2017$CensusTract
+
+
+```
+
+```{r system involvement of youth}
+#Current or former foster care youth (age 16-24)
+
+HMIS_Clean_2017$Foster_Care <- recode(as.character(HMIS_2017$foster_care2), "0" =0, "1" =1, .default = 2, .missing =2)
+
+#Former juvenile justice system
+HMIS_Clean_2017$Juvenile_Justice_System <- recode(as.character(HMIS_2017$juv_justice), "0" =0, "1" =1, .default = 2, .missing =2)
+
+
+```
+
+```{r view data}
+View(HMIS_Clean_2017)
+
+
+```
+
+```{r write csv}
+write.csv(HMIS_Clean_2017, file = "HMIS_2017_Final7.csv")
+
+
+```
+

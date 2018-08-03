@@ -1,0 +1,596 @@
+---
+title: "Demographics_2017"
+author: "Paul Beeman"
+date: "6/13/2018"
+output: html_document
+---
+```{r libraries}
+
+library(foreign)
+library(haven)
+library(tidyverse)
+
+```
+
+
+```{r load dataset}
+Demographics_2017 <- read.spss("~/Documents/ERT/2017 Individual Demographic Survey 1-28-2018 (4,996).sav", to.data.frame = TRUE)
+demo_descriptors_2017 <-  as.list(attr(Demographics_2017, "variable.labels"))
+
+
+
+```
+
+```{r inspect data}
+View(Demographics_2017)
+```
+
+```{r age}
+#not exact year born, but close enough
+Demographics_Clean_2017 <-  data.frame(Birth_Year = 2017-as.integer(Demographics_2017$rawage))
+
+Demographics_Clean_2017$Age <- Demographics_2017$rawage
+
+
+
+```
+
+
+
+```{r sex/gender}
+Demographics_Clean_2017$Gender <- recode(trimws(Demographics_2017$Gender_r), "Other/unknown" = "Unknown") 
+```
+
+```{r sexual orientation}
+Demographics_Clean_2017$Sexual_Orientation <- recode(Demographics_2017$sexorient, "Other" = "Unknown", "Don't know" = "Unknown", "Missing" = "Unknown", "Refused" = "Unknown")
+
+
+```
+
+```{r Ethnicity}
+#Ethnicity
+Demographics_Clean_2017$Ethnicity <- Demographics_2017$Ethnicity
+
+#Race raw data
+Demographics_Clean_2017$Race_Full <- recode(trimws(Demographics_2017$race), "M" = "Unknown", "D" = "Unknown", "R" ="Unknown", "X" = "Unknown", "1" ="White", "2" = "Black", "3" = "Asian", "4" = "American-Indian-Alaska-Native", "5" = "Native-Hawaiin-Pacific-Islander", "6" = "Multirace")
+
+#Race Recode
+Demographics_Clean_2017$Race_Recode <- recode(Demographics_2017$Race_r, "Other ethnicity" = "Other Ethnicity")
+
+```
+
+```{r Veteran}
+#Veteran (known or unknown discharge status)
+Demographics_Clean_2017$Veteran <- recode(trimws(Demographics_2017$veteran), "Veteran" = 1, "Other" = 0, "Blank" = 2, "Unknown discharge" = 1)
+
+
+```
+
+```{r chronic variables}
+
+Demographics_Clean_2017$Chronic_Condition <- recode(trimws(Demographics_2017$longdurcond), "Yes" = 1, "No" = 0, "A" =2, "Don't Know" = 2, "Blank" =2, "Refused" =2, "N/A" =2)
+
+#Have you been homeless for over a year total in the past three years?
+Demographics_Clean_2017$Chronic_Time <- ifelse(trimws(Demographics_2017$hmls1yrpast3yrs) == "Yes" | trimws(Demographics_2017$hmlsmorethan1Yr) == "Yes" | trimws(Demographics_2017$hmlsMoreThan1YrIn3Yr) == "Yes" , 1, 0)  
+
+Demographics_Clean_2017$Chronic <- ifelse(Demographics_Clean_2017$Chronic_Condition == 1 & Demographics_Clean_2017$Chronic_Time == 1, 1, ifelse(Demographics_Clean_2017$Chronic_Condition == 0 | Demographics_Clean_2017$Chronic_Time == 0, 0, 2))
+```
+
+```{r Live with child variable}
+
+#This is not necesarily their biological child, it is just that an adult is living with a child who is the child of someone in the household  
+
+Demographics_Clean_2017$Adult_With_Child <- ifelse(trimws(Demographics_2017$n_kid) >= 1 & Demographics_2017$rawage >= 18, 1, 0)
+
+Demographics_Clean_2017$Adult_With_Child[is.na(Demographics_Clean_2017$Adult_With_Child)] <- 2
+
+```
+
+```{r TIME/MOVEMENT VARIABLES}
+
+#Total Homelessness in lifetime
+
+
+#Duration of Current Episode
+Demographics_Clean_2017$Current_Stint_Duration_Detailed <- Demographics_2017$time_hmls*365 
+
+#this variable is poorly coded
+Demographics_Clean_2017$Current_Stint_Duration <- cut(Demographics_Clean_2017$Current_Stint_Duration_Detailed, breaks = c(-1,1, 32, 122, 182, 365, Inf), right = F, labels = c("Unknown", "Up to 1 Month", "1-3 Months", "4-5 Months", "6-11 Months", "12+ Months"))
+
+#Total Times Homeless in the Past Three Years (housed and then homeless again)
+#If the person has been homeless for more than three years straight this should be 0, this is a problem we need to talk to Jane about.
+
+Demographics_Clean_2017$Times_Homeless_3yrs <- recode(trimws(Demographics_2017$hmlspast3yrs), "Don't know" = "Unknown", "Blank" = "Unknown", "Refused"= "Unknown", "v" = "Unknown")
+
+
+
+#Total Times Homeless in the Past Year (housed and then homeless again)
+Demographics_Clean_2017$Times_Homeless_Past_Year <- recode(trimws(Demographics_2017$hmlspast1yr), "D" = "Unknown", "M" = "Unknown", "R"= "Unknown", "v" = "Unknown", "1" = "1 time", "2" = "2 to 3 times", "3" = "4 or more times")
+
+#First Time Homeless (excluding chronically homeless)?
+Demographics_Clean_2017$New_to_Homelessness <- recode(Demographics_2017$FirstHmls_r, "First Time Homeless Excluding Chronically Homeless" = 1, "Other" = 0)
+
+#At What Age Was First Homeless Experience?
+#Could be interesting imputation
+Demographics_Clean_2017$Age_First_Homeless <- Demographics_2017$hmls_first_age
+
+#Years in LA county?
+
+Demographics_Clean_2017$LA_County_Years <- Demographics_2017$LAC_yrs
+
+#Location Before current Homeless stint
+
+Demographics_Clean_2017$Location_Before_Current_Stint <- recode(Demographics_2017$place_befhmls, "1" = "Los Angeles County", "2" = "Other county in Southern California", "3" = "Other county in California", "4" = "Out of state", "5" = "Outside of US", "D" = "Unknown", "E" = "Unknown", "R" ="Unknown", "S" = "Unknown")
+
+#If they answered LAC, what community
+
+Demographics_Clean_2017$LA_Community_Before_Current_Stint <- Demographics_2017$Community_Name
+
+#SERVICE PLANNING AREA 
+
+Demographics_Clean_2017$SPA <- Demographics_2017$SPA
+
+Demographics_Clean_2017$Census_Tract <- Demographics_2017$Tract
+```
+
+```{r living situation}
+#The time window changed from 2011 from past year to past 6 months
+#LIVED OUTSIDE IN TENT IN THE PAST 6 MONTHS?
+
+Demographics_Clean_2017$Tent_Past_6Mnths <- recode(trimws(Demographics_2017$tent), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#LIVED IN A Makeshift Shelter?
+Demographics_Clean_2017$MSshelter_Past_6Mnths <- recode(trimws(Demographics_2017$MSShelter), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#LIVED IN A CAR?
+
+Demographics_Clean_2017$Car_Past_6Mnths <- recode(trimws(Demographics_2017$car), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#LIVED IN A VAN?
+Demographics_Clean_2017$Van_Past_6Mnths <- recode(trimws(Demographics_2017$van), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#LIVED IN AN RV?
+Demographics_Clean_2017$RV_Camper_Past_6Mnths <- recode(trimws(Demographics_2017$RV_Camper), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#ANY TYPE OF AUTOMOBILE?
+Demographics_Clean_2017$Automobile_Past_6Mnths <- ifelse(Demographics_Clean_2017$Car_Past_6Mnths == 1 | Demographics_Clean_2017$Van_Past_6Mnths ==1 | Demographics_Clean_2017$RV_Camper_Past_6Mnths ==1, 1, ifelse(Demographics_Clean_2017$Car_Past_6Mnths == 0 & Demographics_Clean_2017$Van_Past_6Mnths == 0 & Demographics_Clean_2017$RV_Camper_Past_6Mnths == 0,0,2))
+
+```
+
+
+
+```{r last month living stiuation}
+#Note: People who spent the majority of the last month sheltered were disqualified from taking the survey
+
+#WHERE DID YOU SPEND THE MAJORITY OF YOUR TIME LAST MONTH - OUTDOOR LOCATIONS
+
+
+
+#This is a nice way to disaggregate something
+
+Demographics_Clean_2017$Outside_Majority_Last_Month <- as.character(Demographics_2017$dwelling_r)
+
+Demographics_Clean_2017$Outside_Majority_Last_Month[Demographics_Clean_2017$Outside_Majority_Last_Month == "Vehicle"] <- as.character(Demographics_2017$dwelling[Demographics_Clean_2017$Outside_Majority_Last_Month=="Vehicle"])
+
+Demographics_Clean_2017$Outside_Majority_Last_Month <- recode(Demographics_Clean_2017$Outside_Majority_Last_Month, "Outdoor encampment or shelter" = "Outdoor encampment or tent or makeshift shelter")
+
+
+
+
+```
+
+```{r reason for homelessness}
+#DV
+Demographics_Clean_2017$Reason_Homeless_DV <- recode(Demographics_2017$reason_domviol, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#DRUGS/ALCOHOL
+Demographics_Clean_2017$Reason_Homeless_Subs_Abuse <- recode(Demographics_2017$reason_subsabuse, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#MENTAL 
+
+Demographics_Clean_2017$Reason_Homeless_Mental <- recode(Demographics_2017$reason_mental, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#MEDICAL
+
+Demographics_Clean_2017$Reason_Homeless_Medical <- recode(Demographics_2017$reason_medical, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#JOB
+
+Demographics_Clean_2017$Reason_Homeless_Job <- recode(Demographics_2017$reason_unemployed, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#RELATIONSHIP END
+Demographics_Clean_2017$Reason_Homeless_Breakup <- recode(Demographics_2017$reason_marsplit, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#CHILD SUPPORT
+
+Demographics_Clean_2017$Reason_Homeless_Child_Support <- recode(Demographics_2017$reason_childsup, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#HOUSEHOLD CONFLICT
+
+Demographics_Clean_2017$Reason_Homeless_HH_Conflict <- recode(Demographics_2017$reason_hhconflict, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#DEATH OR ILLNESS IN FAMILY 
+
+Demographics_Clean_2017$Reason_Homeless_Death_Illness_Fam <- recode(Demographics_2017$reason_deathill, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#EVICTION
+
+Demographics_Clean_2017$Reason_Homeless_Eviction <- recode(Demographics_2017$reason_eviction, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2)
+
+#KICKED OUT DUE TO SEXUAL ORIENTATION
+
+Demographics_Clean_2017$Reason_Homeless_Sexual_Orientation <- recode(Demographics_2017$reason_sexorient, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#LEFT OR AGED OUT OF FOSTER CARE
+
+Demographics_Clean_2017$Reason_Homeless_Foster_Care <- recode(Demographics_2017$reason_foster, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#NO FRIENDS OR FAMILY AVAILABLE TO HELP
+
+Demographics_Clean_2017$Reason_Homeless_No_Fam <- recode(Demographics_2017$reason_nofam, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#RECENT IMMIGRATION
+
+Demographics_Clean_2017$Reason_Homeless_Immigration <- recode(Demographics_2017$reason_immig, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#RELEASED FROM TREATMENT CENTER/HOSPITAL (somewhat redundant)
+
+Demographics_Clean_2017$Reason_Homeless_Released_Treatment <- recode(Demographics_2017$reason_hospital, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#RELEASED FROM JAIL OR PRISON
+
+Demographics_Clean_2017$Reason_Homeless_Jail_Prison <- recode(Demographics_2017$reason_jail, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#SAFETY (e.g escaping a gang)
+
+Demographics_Clean_2017$Reason_Homeless_Safety <- recode(Demographics_2017$reason_safety, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#TIMED OUT OR LEFT PREVIOUS HOUSING SITUATION
+
+Demographics_Clean_2017$Reason_Homeless_Previous_Housing_Program <- recode(Demographics_2017$reason_prevhouseprog, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+#UNINHABITABLE PREVIOUS LIVING SITUATION
+
+Demographics_Clean_2017$Reason_Previous_Uninhabitable_Housing <- recode(Demographics_2017$reason_livingcond, "No" = 0, "Yes" = 1, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" = 2)
+
+
+```
+
+```{r Physical/Sexual Abuse}
+#Have you been physically or sexually abused by a relative or someone you have lived with?
+
+Demographics_Clean_2017$Physical_Sexual_Abuse <-  ifelse(Demographics_2017$dv_sexual == "Yes" | Demographics_2017$dv_physical == "Yes", 1, 0)
+
+#Forced sex with payment to someone other than yourself?
+
+Demographics_Clean_2017$Sex_Traffic <- recode(Demographics_2017$sex_traff, "Yes" = 1, "No" = 0)
+
+Demographics_Clean_2017$Sex_Traffic[is.na(Demographics_Clean_2017$Sex_Traffic)] <- 2
+
+```
+
+```{r turned away from shelter reason}
+#Not found in 2017
+
+
+```
+
+```{r Disabilities/Illness}
+#Have you ever had or been told by a healthcare provider you had one of these conditions?
+#This differs from 2011 where it only asks about the previous year.
+
+#Physical Disability
+Demographics_Clean_2017$Physical_Disability_Ever <- recode(Demographics_2017$phys_disab, "No" = 0, "Yes" = 1, "Blank" = 2)
+
+#Physical Illness (Chronic, Ongoing)
+Demographics_Clean_2017$Physical_Illness_Ever <- recode(Demographics_2017$phys_illness, "No" = 0, "Yes" = 1, "Blank" = 2)
+
+#Alcohol Abuse
+
+Demographics_Clean_2017$Alcohol_Abuse_Ever <- recode(Demographics_2017$alcohol, "No" = 0, "Yes" = 1, "Blank" = 2)
+
+#Drug Abuse
+
+Demographics_Clean_2017$Drug_Abuse_Ever <- recode(Demographics_2017$drugabuse, "No" = 0, "Yes" = 1, "Blank" = 2)
+
+#Mental Illness
+
+Demographics_Clean_2017$Mental_Illness_Ever <- recode(Demographics_2017$mental, "No" = 0, "Yes" = 1, "Blank" = 2)
+
+#Severe Depression
+
+Demographics_Clean_2017$Severe_Depression_Ever <- recode(Demographics_2017$depression, "No" = 0, "Yes" = 1, "Blank" = 2)
+
+#PTSD
+
+Demographics_Clean_2017$PTSD_Ever <- recode(Demographics_2017$PTSD, "No" = 0, "Yes" = 1, "Blank" = 2)
+
+#TRAUMATIC BRAIN INJURY (TBI)
+
+Demographics_Clean_2017$Traumatic_Brain_Injury_Ever <- recode(Demographics_2017$braininjury, "No" = 0, "Yes" = 1, "Due to Age" = 2, "Blank" = 2)
+
+#Developmental Disability (18+)
+
+Demographics_Clean_2017$Developmental_Disability_Ever <- recode(Demographics_2017$develop, "No" = 0, "Yes" = 1, "Due to Age" = 2, "Yes, but missing due to age" = 2, "Blank" = 2)
+
+```
+
+```{r HIV}
+#HIV positive (18+ only)
+Demographics_Clean_2017$HIV_Positive <- recode(Demographics_2017$hiv, "No" = 0, "Yes" = 1, "Blank" = 2, "Due to age" = 2) 
+```
+
+```{r drugs and alcohol}
+#Catch all for drug and alcohol abuse 
+Demographics_Clean_2017$Drug_Alcohol_History <- ifelse(trimws(Demographics_2017$alcohol) == "Yes" | trimws(Demographics_2017$drugabuse) == "Yes" | trimws(Demographics_2017$observed_subsabuse) == "Yes", 1, ifelse(trimws(Demographics_2017$alcohol) == "No" & trimws(Demographics_2017$drugabuse) == "No" & trimws(Demographics_2017$observed_subsabuse) == "No", 0, 2)) 
+
+```
+
+```{r employment status/student}
+#Current Employment Situation (employed in an official capacity), this is a different question than in 2011 where it asks about the majority of the past 6 months
+#Demographics_Clean_2017$Current_Employment_Situation <- recode(Demographics_2017$emp_status, "Blank" = "Unknown", "N/A" = "Unknown")
+
+#Unemployed, looking for work
+Demographics_Clean_2017$Unemployed_Looking <- as.numeric(grepl("Unemployed; actively looking for work",Demographics_2017$emp_status))
+
+#Unemployed, not looking
+Demographics_Clean_2017$Unemployed_Not_Looking <- as.numeric(grepl("not actively looking for work",Demographics_2017$emp_status))
+
+#Full Time
+Demographics_Clean_2017$Full_Time <- as.numeric(grepl("Full-time",Demographics_2017$emp_status))
+
+#Part Time
+Demographics_Clean_2017$Part_Time <- as.numeric(grepl("Part-time",Demographics_2017$emp_status))
+
+#Seasonal
+Demographics_Clean_2017$Seasonal <- 
+as.numeric(grepl("Seasonal",Demographics_2017$emp_status))
+
+#On disability
+Demographics_Clean_2017$Unable_To_Work_Disability <- 
+as.numeric(grepl("disability",Demographics_2017$emp_status))
+
+#Temporary Work 
+Demographics_Clean_2017$Temp_Work <- 
+as.numeric(grepl("Temporary",Demographics_2017$emp_status))
+
+#Retired
+Demographics_Clean_2017$Retired <- 
+as.numeric(grepl("Retired",Demographics_2017$emp_status))
+
+#Student/Vocational
+Demographics_Clean_2017$Student_Vocational <- 
+as.numeric(grepl("student",Demographics_2017$emp_status))
+
+#OTHER WAYS TO MAKE MONEY
+
+#Do you make money panhandling?
+Demographics_Clean_2017$Panhandling <- recode(Demographics_2017$Panhandle, "Panhandling" = 1, "Other" = 0)
+
+#Do you make money recycling?
+Demographics_Clean_2017$Recycling <- recode(Demographics_2017$Recycle, "Recycling" = 1, "Other" = 0)
+
+#Do you make money doing day labor?
+Demographics_Clean_2017$Day_Labor <- recode(Demographics_2017$DayLabor, "Day Labor" =1, "Other"=0)
+
+#Do you make money as an entertainer or street performer?
+Demographics_Clean_2017$Performance <- recode(Demographics_2017$Entertain, "Entertainment" =1, "Other" = 0)
+
+#Do you make money as a sex worker(explicitly asked if they get to keep the money)?
+Demographics_Clean_2017$Sex_Worker <- recode(Demographics_2017$SexWork, "Sex Work" =1, "Other" =0)
+
+#BARRIERS TO WORK: Asked only to those searching for work. If they are not searching for work they are a Valid Skip
+
+#No interview
+Demographics_Clean_2017$Work_Barrier_No_Interview <- recode(Demographics_2017$workbarrier_nointview, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Interview, but turned down
+Demographics_Clean_2017$Work_Barrier_Turned_Down <- recode(Demographics_2017$workbarrier_intview, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Lack Educational Requirements
+Demographics_Clean_2017$Work_Barrier_Lack_Ed <- recode(Demographics_2017$workbarrier_educ, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Lack Experience
+Demographics_Clean_2017$Work_Barrier_Experience <- recode(Demographics_2017$workbarrier_exper, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#No access to services
+Demographics_Clean_2017$Work_Barrier_No_Access <- recode(Demographics_2017$workbarrier_access, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Gaps in employment
+Demographics_Clean_2017$Work_Barrier_Gaps <- recode(Demographics_2017$workbarrier_empgaps, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#You need child care services
+Demographics_Clean_2017$Work_Barrier_Child_Care <- recode(Demographics_2017$workbarrier_childcare, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#You feel that you feel discrimination (race, gender, orientation, religion, age, etc)
+
+Demographics_Clean_2017$Work_Barrier_Discrimination <- recode(Demographics_2017$workbarrier_discrim, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Need Transportation
+
+Demographics_Clean_2017$Work_Barrier_Transportation <- recode(Demographics_2017$workbarrier_trans, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Need Clothes
+
+Demographics_Clean_2017$Work_Barrier_Clothes <- recode(Demographics_2017$workbarrier_clothes, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Physical Health Problems
+
+Demographics_Clean_2017$Work_Barrier_Physical <- recode(Demographics_2017$workbarrier_physical, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Mental Health Problems
+
+Demographics_Clean_2017$Work_Barrier_Mental <- recode(Demographics_2017$workbarrier_mental, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Substance Abuse
+
+Demographics_Clean_2017$Work_Barrier_Substance <- recode(Demographics_2017$workbarrier_subsabuse, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#No ID
+
+Demographics_Clean_2017$Work_Barrier_NoID <- recode(Demographics_2017$workbarrier_id, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#No Social Security Card
+Demographics_Clean_2017$Work_Barrier_No_SSCard <- recode(Demographics_2017$workbarrier_sscard, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Criminal record
+
+Demographics_Clean_2017$Work_Barrier_Criminal_Record <- recode(Demographics_2017$workbarrier_crimrec, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+#Not authorized to work in US
+
+Demographics_Clean_2017$Work_Barrier_nonUS <- recode(Demographics_2017$workbarrier_auth, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+
+```
+
+```{r current government assistance}
+#Unemployment
+Demographics_Clean_2017$Gov_Assist_Unemployment <- recode(Demographics_2017$govasst_unemp, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#General Relief
+Demographics_Clean_2017$Gov_Assist_General_Relief <- recode(Demographics_2017$govasst_grga, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#SSI/SSDI/Disability
+
+Demographics_Clean_2017$Gov_Assist_SSI_SSD <- recode(Demographics_2017$govasst_ssidi, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+# Social Security 
+
+Demographics_Clean_2017$Gov_Assist_Social_Security <- recode(Demographics_2017$govasst_ssret, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Food Stamps 
+
+Demographics_Clean_2017$Gov_Assist_Food_Stamps <- recode(Demographics_2017$govasst_food, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Government assistance program for immigrants
+
+Demographics_Clean_2017$Gov_Assist_CAPI <- recode(Demographics_2017$govasst_capi, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Women, Infants, Children
+
+Demographics_Clean_2017$Gov_Assist_Women_Infants_Children <- recode(Demographics_2017$govasst_wic, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#CalWorks/TANF
+
+Demographics_Clean_2017$Gov_Assist_CalWorks <- recode(Demographics_2017$govasst_calworks, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Medicaid/Medi-Cal/LA Care
+
+Demographics_Clean_2017$Gov_Assist_MediCal <- recode(Demographics_2017$govasst_mcaid, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+
+#Medicare
+
+Demographics_Clean_2017$Gov_Assist_Medicare <- recode(Demographics_2017$govasst_mcare, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Vet Disability Vet_Disability_Payment
+
+Demographics_Clean_2017$Gov_Assist_Vet_Disability_Payment <- recode(Demographics_2017$govasst_vetdis, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Vet Medical Center/Veteran Benefits
+
+Demographics_Clean_2017$Gov_Assist_Vet_Other_Benefit <- recode(Demographics_2017$govasst_vetmed, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Veteran Pension
+
+Demographics_Clean_2017$Gov_Assist_Vet_Pension <- recode(Demographics_2017$govasst_vetpen, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Child Support or survivor's benefits
+
+Demographics_Clean_2017$Gov_Assist_Child_Support <- recode(Demographics_2017$govasst_childsup, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+```
+
+```{r school}
+#School Completed
+Demographics_Clean_2017$School_Complete <- recode(Demographics_2017$education, "Unknown code" = "Unknown", "Unknown code_duplicated_M" = "Unknown", "Unknown code_duplicated_R" = "Unknown", "Nursery School to 4th Grade" = "Less than 5th grade", "Post-secondary school, community college, or trade school" = "Some college", "4-year college degree" = "Bachelor's degree", "5th or 6th grade" = "Grades 5-6", "7th or 8th grade" = "Grades 7-8", "9th grade" = "Grades 9-11", "10th grade" = "Grades 9-11", "11th grade" = "Grades 9-11", "12th grade" = "12th grade, no diploma")
+
+
+```
+
+```{r hospital, emergency room stays}
+#ER visits in the past year? 
+Demographics_Clean_2017$ER_Past_Year <- recode(Demographics_2017$ER_times, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Attempt to get levels right--Didn't work
+#Demographics_Clean_2017$ER_Past_Year <- ifelse(Demographics_2017$ER_past12mo == "No", "0", ifelse(Demographics_2017$ER_times == "Yes", "1", ifelse(Demographics_2017$ER_past12mo == "Yes", as.character(Demographics_2017$ER_times), ifelse(Demographics_2017$ER_times == "No", 0, Demographics_2017$ER_times)))) 
+
+Demographics_Clean_2017$ER_Past_Year <- as.numeric(as.character(Demographics_Clean_2017$ER_Past_Year))
+
+
+#Homeless at the time you were in the ER?
+Demographics_Clean_2017$ER_Homeless <- recode(Demographics_2017$ER_hmls, "Don't Know" = 2, "Blank" = 2, "Refused" = 2, "N/A" =2, "Valid Skip" = 2, "No" =0, "Yes" =1)
+
+#Homeless services to find stable housing offered while in ER
+Demographics_Clean_2017$ER_Homeless_Services <- recode(Demographics_2017$ER_hmls_svcs, "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" = "Unknown", "N/A" = "Unknown")
+
+
+```
+
+```{r legal systems}
+#Foster Care
+
+Demographics_Clean_2017$Foster_Care_Involvement <- recode(Demographics_2017$foster_care, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Juvenile Detention or Probation Camp
+
+Demographics_Clean_2017$Juvenile_Detention_Involvement <- recode(Demographics_2017$juv_detention, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Juvenile Probation 
+
+Demographics_Clean_2017$Juvenile_Probation_Involvement <- recode(Demographics_2017$juv_probation, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Mandated stay at inpatient or outpatient mental health treatment center
+
+Demographics_Clean_2017$Mental_Treatment_Mandate_Involvement <- recode(Demographics_2017$mandated_stay, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Jail or Prison
+
+Demographics_Clean_2017$Jail_Prison_Involvement <- recode(Demographics_2017$prison, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Adult Probation
+
+Demographics_Clean_2017$Adult_Probation_Involvement <- recode(Demographics_2017$adult_probation, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Parole
+
+Demographics_Clean_2017$Parole_Involvement <- recode(Demographics_2017$parole, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#LAST YEAR JUSTICE SYSTEM
+
+#Released from a correctional institution in the past 12 months 
+Demographics_Clean_2017$Justice_System_Past_Year <- recode(Demographics_2017$justice_system_12mo, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2)
+
+#Homeless at the time you entered jail or prison in the past year
+Demographics_Clean_2017$Justice_System_Homeless <- recode(Demographics_2017$jail_hmls, "No" = 0, "Yes" =1, "Don't Know" = 2, "Blank" = 2, "Refused" =2, "N/A" =2,"V"= 2 )
+
+#Were you offered any services to help you find stable housing when in prison
+Demographics_Clean_2017$Justice_System_Services <- recode(Demographics_2017$jail_hmls_svcs, "No" = "No", "Yes" ="Yes", "Don't Know" = "Unknown", "Blank" = "Unknown", "Refused" ="Unknown", "N/A" ="Unknown","V"= "Valid Skip" )
+
+
+```
+
+
+
+```{r observed}
+Demographics_Clean_2017$Observed_Mental <- recode(Demographics_2017$observed_mental, "Yes"= 1 , "No" =0, "Blank" = 0, "N/A" = 0)
+
+Demographics_Clean_2017$Observed_Substance <- recode(Demographics_2017$observed_subsabuse, "Yes"= 1 , "No" =0, "Blank" = 0, "N/A" = 0)
+
+Demographics_Clean_2017$Observed_Physical <- recode(Demographics_2017$observed_physical, "Yes"= 1 , "No" =0, "Blank" = 0, "N/A" = 0)
+
+
+```
+```{r write data}
+write.csv(Demographics_Clean_2017, file = "Demo_2017_Clean2.csv")
+
+
+```
+```{r view data}
+datatable(head(Demographics_Clean_2017, 100))
+
+
+
+
+```

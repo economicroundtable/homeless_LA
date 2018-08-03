@@ -1,0 +1,379 @@
+---
+title: "Demographics_2011"
+author: "Paul Beeman"
+date: "May 31, 2018"
+output: html_document
+---
+```{r data load}
+Demographics_2011 <- read.spss("~/Documents/ERT/2011 Demographic Survey Data-Cleaned (3,592).sav", to.data.frame = TRUE)
+demo_descriptors_2011 <-  as.list(attr(Demographics_2011, "variable.labels"))
+
+```
+
+```{r inspect data}
+View(Demographics_2011)
+
+
+```
+```{r Age}
+#AGE
+
+Demographics_Clean_2011 <- data.frame(Birth_Year = Demographics_2011$X.2BirthYear)
+Demographics_Clean_2011$Age <- Demographics_2011$Age
+#get rid of NA ages
+Demographics_Clean_2011$Age[is.na(Demographics_Clean_2011$Age)] <- 2011 - Demographics_Clean_2011$Birth_Year[is.na(Demographics_Clean_2011$Age)]
+
+```
+
+
+
+```{r sex/gender}
+#SEX/GENDER
+
+#Demographics_Clean_2011$Sex <- recode(trimws(Demographics_2011$X.3Sex), "BLANK" = "Unknown")
+
+Demographics_Clean_2011$Gender <- trimws(Demographics_2011$Gender)
+```
+
+```{r Race continued}
+#ETHNICITY
+
+Demographics_Clean_2011$Ethnicity <- recode(trimws(Demographics_2011$Ethnicity), "Other" = "Other Ethnicity", "Missing" = "Unknown")
+
+#RACE
+Demographics_Clean_2011$Race_Full <- Demographics_2011$X.5Race
+
+Demographics_Clean_2011$Race_Recode <- recode(trimws(Demographics_2011$Race_r), "Other" = "Other Ethnicity", "Missing" ="Unknown")
+
+
+```
+
+
+```{r veteran}
+#VETERAN
+military_test <- trimws(Demographics_2011$X.6ArmedForces)
+military_test <- ifelse(military_test == "Yes", 1, ifelse(military_test == "No", 0, .1))
+
+ng <- trimws(Demographics_2011$X.6aNationalGuard)
+ng<- ifelse(ng == "Yes", 1, ifelse(ng == "No", 0, .1))
+
+active <- trimws(Demographics_2011$X.6b_ActiveDuty)
+active <- ifelse(active == "Yes", 1, ifelse(active == "No", 0, .5))
+
+vetsum <- military_test + ng + active
+
+Demographics_Clean_2011$Veteran <- ifelse(vetsum >= 1, 1, ifelse(vetsum == 0, 0, ifelse(vetsum == .5, 0, 2)))
+
+```
+
+
+```{r chronic variables}
+#CHRONIC
+
+chrontime <- trimws(Demographics_2011$chronTime)
+chrontime<- ifelse(chrontime == "yes", 1, 0)
+
+chroncon <- trimws(Demographics_2011$chronCond)
+chroncon <- ifelse(chroncon == "yes", 1, 0)
+
+chronsum <- chrontime + chroncon
+
+Demographics_Clean_2011$Chronic <- recode(chronsum, '2' = 1, '1' = 0, '0' = 0)
+
+Demographics_Clean_2011$Chronic_Condition <- chroncon
+
+Demographics_Clean_2011$Chronic_Time <- chrontime
+```
+
+```{r Living with children variables}
+#CHILDREN
+Demographics_Clean_2011$Have_Child <- ifelse(trimws(Demographics_2011$X.7ChildUnder18) == "Yes", 1, ifelse(trimws(Demographics_2011$X.7ChildUnder18) == "No", 0, 2)) 
+
+#FOLLOW UP QUESTION TO Have_Child. DO YOU LIVE WITH THEM?
+#This is slightly different than 2017 because we know that this is their biological child.
+Demographics_Clean_2011$Adult_With_Child <- ifelse(trimws(Demographics_2011$X.7aLivingWithThem) == "Yes", 1, ifelse(trimws(Demographics_2011$X.7aLivingWithThem) == "No", 0, 2))
+
+
+
+```
+
+```{r TIME VARIABLES}
+#TOTAL TIME HOMELESS IN LIFE
+Demographics_Clean_2011$Total_Time_Homeless_Life <- as.character(trimws(Demographics_2011$X.8NoTimesHomeless))
+
+Demographics_Clean_2011$Total_Time_Homeless_Life[grepl(",", Demographics_2011$X.8NoTimesHomeless)] <- "Unknown"
+
+Demographics_Clean_2011$Total_Time_Homeless_Life <- recode(Demographics_Clean_2011$Total_Time_Homeless_Life, "BLANK" = "Unknown", "ERROR #3100" = "Unknown")
+
+#TOTAL TIMES HOMELESS IN PAST 3 YEARS
+Demographics_Clean_2011$Times_Homeless_3yrs <- as.character(trimws(Demographics_2011$X.9NoTimesHomelessPast3Years))
+
+Demographics_Clean_2011$Times_Homeless_3yrs[grepl(",", Demographics_2011$X.9NoTimesHomelessPast3Years)] <- "Unknown"
+
+Demographics_Clean_2011$Times_Homeless_3yrs <- recode(Demographics_Clean_2011$Times_Homeless_3yrs, "BLANK" = "Unknown", "ERROR #3100" = "Unknown", "2 or 3 times" = "2 to 3 times")
+
+
+#TOTAL TIMES HOMELESS PAST YEAR
+
+Demographics_Clean_2011$Times_Homeless_Past_Year <- as.character(trimws(Demographics_2011$X.10NoTimesHomelessPast12Months))
+
+Demographics_Clean_2011$Times_Homeless_Past_Year[grepl(",", Demographics_2011$X.10NoTimesHomelessPast12Months)] <- "Unknown" 
+
+Demographics_Clean_2011$Times_Homeless_Past_Year <- recode(Demographics_Clean_2011$Times_Homeless_Past_Year, "BLANK" = "unknown", "ERROR #3100" = "unknown", "2 or 3 times" = "2 to 3 times")
+
+
+#DURATION OF CURRENT EPISODE
+
+Demographics_Clean_2011$Current_Stint_Duration <- recode(trimws(Demographics_2011$TimeHmls_r), "7 days or less" = "up to 1 month", "8 - 29 days" = "up to 1 month", "1 - 5 years" = "12+ months", "More than 5 years" = "12+ months", "4 - 5 months" = "4-5 months", "6 - 11 months" = "6-11 months", "1 - 3 months" = "1-3 months")   
+
+Demographics_Clean_2011$Current_Stint_Duration_Detailed <- recode(trimws(Demographics_2011$TimeHmls_r), "7 days or less" = "up to 1 week", "8 - 29 days" = "1-4 weeks", "1 - 3 months" = "1-3 months", "4 - 5 months" = "4-5 months", "6 - 11 months" ="6-11 months", "1 - 5 years" = "12+ months", "More than 5 years" ="12+ months")
+
+#SPENT ANY TIME OUTSIDE OF LA COUNTY IN THE LAST 7 DAYS?
+Demographics_Clean_2011$Outside_LA_County <- as.character(trimws(Demographics_2011$X.12Last7DaysOutofLA))
+
+Demographics_Clean_2011$Outside_LA_County <- recode(Demographics_Clean_2011$Outside_LA_County,"Yes" = 1, "No" = 0,"BLANK" = 2, "(Yes,No)" = 2)
+
+#SPA
+
+Demographics_Clean_2011$SPA <- recode(Demographics_2011$StaffSPA, "SPA1" =1, "SPA2" =2, "SPA3" = 3, "SPA4" = 4, "SPA5" = 5, "SPA6" =6, "SPA7" =7, "SPA8" =8) 
+
+#CT
+Demographics_Clean_2011$Census_Tract_Or_ShelterID <- Demographics_2011$StaffShelterIDorCensusTract
+```
+
+```{r past living situation}
+#LIVE OUTSIDE IN TENT?
+
+Demographics_Clean_2011$Tent_Past_Year <- recode(trimws(Demographics_2011$X.13LastYearTimeSpentOutside),"Yes" = 1, "No" = 0, "BLANK" = 2, "(Yes,No)" = 2)
+
+#LIVE IN AN ENCAMPMENT?
+Demographics_Clean_2011$Encampment_Past_Year <- recode(trimws(Demographics_2011$X.14LastYearTimeSpentEncap),"Yes" = 1, "No" = 0, "BLANK" = 2, "(Yes,No)" = 2)
+
+#ANY NIGHTS IN A CAR IN PAST YEAR?
+Demographics_Clean_2011$Car_Past_Year <- recode(trimws(Demographics_2011$X.15LastYesrNightsInCar),"Yes" = 1, "Yea" = 1, "No" = 0, "BLANK" = 2, "ERROR #3100" = 2,"(Yea,No)" = 2, "(Yes,No)" = 2)
+
+#ANY NIGHTS IN A VAN PAST YEAR?
+Demographics_Clean_2011$Van_Past_Year <- recode(trimws(Demographics_2011$X.16LastYearNightsSpentInVan),"Yes" = 1, "Yea" = 1, "No" = 0, "BLANK" = 2, "ERROR #3100" = 2,"(Yea,No)" = 2, "(Yes,No)" = 2)
+
+#ANY NIGHTS IN AN RV PAST YEAR?
+Demographics_Clean_2011$RV_Camper_Past_Year <- recode(trimws(Demographics_2011$X.17LastYearNightSpentInRVCamper),"Yes" = 1, "Yea" = 1, "No" = 0, "BLANK" = 2, "ERROR #3100" = 2,"(Yea,No)" = 2, "(Yes,No)" = 2)
+
+#ANY TYPE OF AUTOMOBILE IN THE PAST YEAR
+
+Demographics_Clean_2011$Automobile_Past_Year <- ifelse(Demographics_Clean_2011$Car_Past_Year == 1 | Demographics_Clean_2011$Van_Past_Year ==1 | Demographics_Clean_2011$RV_Camper_Past_Year ==1, 1, ifelse(Demographics_Clean_2011$Car_Past_Year == 0 & Demographics_Clean_2011$Van_Past_Year == 0 & Demographics_Clean_2011$RV_Camper_Past_Year == 0,0,2))
+
+```
+
+```{r last month living situation}
+#It is important to note that some people put more than one location, but I left these in because they could be valuable.
+
+#WHERE DID YOU SPEND THE MAJORITY OF YOUR TIME LAST MONTH - OUTDOOR LOCATIONS
+Demographics_Clean_2011$Outside_Majority_Last_Month <- as.character(trimws(Demographics_2011$X.18OutDoorLocations))
+
+
+Demographics_Clean_2011$Outside_Majority_Last_Month[grepl(",", Demographics_2011$X.18OutDoorLocations)] <- "Unknown" 
+#COULD NOT MATCH TO 2017 EXACTLY DUE TO OVERLAPPING VARIABLE
+Demographics_Clean_2011$Outside_Majority_Last_Month <- recode(Demographics_Clean_2011$Outside_Majority_Last_Month, "BLANK" = "Unknown", "ERROR #3100" = "Unknown", "In a car" = "Car or Truck", "In a van" = "Van", "In a RV/camper" = "RV or Camper", "In a tent" = "Outdoor encampment or tent or makeshift shelter", "In an encampment" = "Outdoor encampment or tent or makeshift shelter", "In a backyard garage garden or a storage structure" = "Nonhabitable building or under bridge", "In a bus depot train station or transit center" = "Other outdoor location")
+
+#WHERE DID YOU SPEND THE MAJORITY OF YOUR TIME LAST MONTH-INDOOR LOCATIONS
+
+Demographics_Clean_2011$Indoor_Majority_Last_Month <- as.character(trimws(Demographics_2011$X.18IndoorLocations))
+
+#Decided to leave in multiple entries
+#Demographics_Clean_2011$Indoor_Majority_Last_Month[grepl(",", Demographics_2011$X.18IndoorLocations)] <- "Unknown" 
+
+Demographics_Clean_2011$Indoor_Majority_Last_Month <- recode(Demographics_Clean_2011$Indoor_Majority_Last_Month, "BLANK" = "Unknown", "ERROR #3100" = "Unknown")
+
+
+
+
+
+```
+
+
+
+```{r Reason for homelessness}
+#What situation lead you to become homeless?
+#Yes=1, No/Unknown=0
+#Choose all that apply questions should be spread into multiple columns
+
+#DV
+Demographics_Clean_2011$Reason_Homeless_DV <- as.numeric(grepl("domestic violence", Demographics_2011$X.19SituationCause))
+
+#DRUGS/ALCOHOL
+Demographics_Clean_2011$Reason_Homeless_Subs_Abuse <- as.numeric(grepl("drugs|alcohol", Demographics_2011$X.19SituationCause))
+
+
+
+#MENTAL
+Demographics_Clean_2011$Reason_Homeless_Mental <- as.numeric(grepl("mental", Demographics_2011$X.19SituationCause))
+
+#MEDICAL
+Demographics_Clean_2011$Reason_Homeless_Medical <- as.numeric(grepl("medical", Demographics_2011$X.19SituationCause))
+
+#JOB
+Demographics_Clean_2011$Reason_Homeless_Job <- as.numeric(grepl("job", Demographics_2011$X.19SituationCause))
+
+
+
+```
+
+```{r Physical/Sexual Abuse}
+#Have you been physically or sexually abused by a relative or someone you have lived with?
+Demographics_Clean_2011$Physical_Sexual_Abuse <-  recode(trimws(Demographics_2011$X.20PhysicalSecualAbuse), "(yes,No)" = 2, "No" = 0, "yes" = 1, "BLANK" = 2)
+
+```
+
+```{r turned away from shelter reason}
+#In the past month, have you been turned away from a shelter or transitional housing?
+Demographics_Clean_2011$Turned_Away_Last_Month <- recode(trimws(Demographics_2011$X.21TurnedAway),"(Yes,No)" = 2, "BLANK" = 2, "No" = 0, "Yes" = 1)
+
+#If you have been turned away from a shelter, what was the reason? 
+
+Demographics_Clean_2011$Turned_Away_Strictness <- as.numeric(grepl("strict",Demographics_2011$X.21aTurnedAwayReason))
+
+Demographics_Clean_2011$Turned_Away_Drug_Alcohol <- as.numeric(grepl("Drug",Demographics_2011$X.21aTurnedAwayReason))
+
+Demographics_Clean_2011$Turned_Away_Physical <- as.numeric(grepl("physical",Demographics_2011$X.21aTurnedAwayReason))
+
+Demographics_Clean_2011$Turned_Away_Mental <- as.numeric(grepl("mental",Demographics_2011$X.21aTurnedAwayReason))
+
+Demographics_Clean_2011$Turned_Away_NoID <- as.numeric(grepl("identification",Demographics_2011$X.21aTurnedAwayReason))
+
+Demographics_Clean_2011$Turned_Away_Criminal_Record <- as.numeric(grepl("criminal",Demographics_2011$X.21aTurnedAwayReason))
+
+Demographics_Clean_2011$Turned_Away_No_Beds <- as.numeric(grepl("beds",Demographics_2011$X.21aTurnedAwayReason))
+
+```
+
+```{r Disabilities/Illness}
+#In the past year, have you experienced or been diganosed with one or more of these disabilities:
+
+Demographics_Clean_2011$Physical_Disability_Past_Year <- as.numeric(grepl("physical",Demographics_2011$X.25diagnosedWtih))
+
+Demographics_Clean_2011$Mental_Illness_Past_Year <- as.numeric(grepl("mental",Demographics_2011$X.25diagnosedWtih))
+
+Demographics_Clean_2011$Alcohol_Abuse_Past_Year <- as.numeric(grepl("Alcohol",Demographics_2011$X.25diagnosedWtih))
+
+Demographics_Clean_2011$Drug_Abuse_Past_Year <- as.numeric(grepl("Drug",Demographics_2011$X.25diagnosedWtih))
+
+Demographics_Clean_2011$Tobacco_Past_Year <- as.numeric(grepl("Tobacco",Demographics_2011$X.25diagnosedWtih))
+
+#Some other long term health problem
+Demographics_Clean_2011$Long_Term_Health_Past_Year <- as.numeric(grepl("long",Demographics_2011$X.25diagnosedWtih, ignore.case = TRUE))
+
+#Depression
+Demographics_Clean_2011$Depression_Past_Year <- recode(trimws(Demographics_2011$X.26Depression), "(Yes,No)" = 2, "BLANK" =2, "ERROR #3100" = 2, "No" = 0, "Yes" = 1)
+
+Demographics_Clean_2011$Depression[is.na(Demographics_Clean_2011$Depression_Past_Year)] <- 2
+```
+
+```{r HIV}
+Demographics_Clean_2011$HIV_Positive <- recode(trimws(Demographics_2011$X.27HIVPositive), "Yes" = 1, "No" = 0)
+
+Demographics_Clean_2011$HIV_Positive[is.na(Demographics_Clean_2011$HIV_Positive)] <- 2
+```
+```{r drugs/alcohol}
+
+#DRUGS/ALCOHOL
+
+#make a drug and alcohol abuse column. This is a catch all for any history of drug or alcohol abuse.
+Demographics_Clean_2011$Drug_Alcohol_History <- as.numeric(grepl("drug", Demographics_2011$X.25diagnosedWtih, ignore.case = TRUE)) + as.numeric(grepl("Yes$", trimws(Demographics_2011$X.22AlcoholDruguse), ignore.case = TRUE))+ as.numeric(grepl("drug", Demographics_2011$X.21aTurnedAwayReason, ignore.case = TRUE))+as.numeric(grepl("alcohol", Demographics_2011$X.25diagnosedWtih, ignore.case = TRUE))+as.numeric(grepl("Yes$", trimws(Demographics_2011$X.23TreatmentPrograms), ignore.case = TRUE))
+
+Demographics_Clean_2011$Drug_Alcohol_History <- recode(Demographics_Clean_2011$Drug_Alcohol_History, '0' = 0, '1' = 1, '2' = 1, '3' = 1, '4' = 1, '5' = 1)
+
+#Drug or Alcohol abuse causing legal, financial, or health problems
+
+Demographics_Clean_2011$Hardship_From_Substance_Abuse <- recode(trimws(Demographics_2011$X.22AlcoholDruguse), "(Yes,No)" = 2, "BLANK" = 2, "No" = 0, "Yes" = 1)
+```
+
+```{r employment status/student}
+#Does this describe a significant amount of your work life over the past 6 months? This question was extremely poorly worded on the survey.This was a single choose all that apply question
+Demographics_Clean_2011$Part_Time <- as.numeric(grepl("Part-time",Demographics_2011$X.29Employment))
+
+Demographics_Clean_2011$Full_Time <- as.numeric(grepl("Full-time",Demographics_2011$X.29Employment))
+
+Demographics_Clean_2011$Day_Labor <- as.numeric(grepl("Day labor",Demographics_2011$X.29Employment))
+
+Demographics_Clean_2011$Student_Vocational <- as.numeric(grepl("vocational",Demographics_2011$X.29Employment))
+
+Demographics_Clean_2011$Panhandling <- as.numeric(grepl("Panhandling",Demographics_2011$X.29Employment))
+
+Demographics_Clean_2011$Unable_To_Work_Disability <- as.numeric(grepl("Disabled",Demographics_2011$X.29Employment))
+
+Demographics_Clean_2011$Unemployed_Looking <- as.numeric(grepl("Unemployment but looking",Demographics_2011$X.29Employment))
+
+Demographics_Clean_2011$Unemployed_Not_Looking <- as.numeric(grepl("and not looking",Demographics_2011$X.29Employment))
+
+```
+
+```{r currently utilized homeless services}
+#Are you currently using or getting any of the folowing services or programs?
+Demographics_Clean_2011$Currently_Emergency_Shelter <- as.numeric(grepl("Emergency",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Transitional_Housing <- as.numeric(grepl("Transitional",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Pay_Shelter <- as.numeric(grepl("Pay",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Access_DropIn <- as.numeric(grepl("Drop-in",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Job_Training <- as.numeric(grepl("job",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Case_Management <- as.numeric(grepl("management",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Mental_Health <- as.numeric(grepl("Mental",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Alcohol_Drug_Counseling <- as.numeric(grepl("Alcohol counceling |AA|Drug counceling|NA",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Housing_Placement <- as.numeric(grepl("housing placement",Demographics_2011$X.28CurrentServices))
+
+Demographics_Clean_2011$Currently_Legal_Assistance <- as.numeric(grepl("Legal",Demographics_2011$X.28CurrentServices))
+
+```
+
+```{r current government assistance}
+Demographics_Clean_2011$Gov_Assist_Unemployment <- as.numeric(grepl("Unemployment",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_General_Relief <- as.numeric(grepl("GR",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_SSI_SSD <- as.numeric(grepl("SSI/SSD",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_Social_Security <- as.numeric(grepl("Retirement",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_Food_Stamps <- as.numeric(grepl("Stamps/EBT",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_CAPI <- as.numeric(grepl("CAPI",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_Women_Infants_Children <- as.numeric(grepl("WIC",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_CalWorks <- as.numeric(grepl("CalWorks",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_MediCal <- as.numeric(grepl("Medi-Cal",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_Medicare <- as.numeric(grepl("Medicare",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_Vet_Disability_Payment <- as.numeric(grepl("Veteran's",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_Vet_Other_Benefit <- as.numeric(grepl("veterans",Demographics_2011$X.30GovAssistance))
+
+Demographics_Clean_2011$Gov_Assist_Child_Support <- as.numeric(grepl("Child support",Demographics_2011$X.30GovAssistance))
+```
+
+```{r dummy weights}
+Demographics_Clean_2011$Weights <- rep(1, nrow(Demographics_Clean_2011))
+
+
+```
+
+
+```{r}
+View(Demographics_Clean_2011)
+
+```
+
+```{r export}
+write.csv(Demographics_Clean_2011, file = "Demo_2011_Final.csv")
+
+
+```
+

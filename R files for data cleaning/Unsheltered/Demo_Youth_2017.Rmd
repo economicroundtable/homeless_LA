@@ -1,0 +1,194 @@
+---
+title: "Demographics_Youth_1017"
+author: "Paul Beeman"
+date: "7/18/2018"
+output: html_document
+---
+
+```{r}
+Demographics_Youth_2017 <- read.spss("~/Documents/ERT/2017 Youth Count Survey Records 1-28-2018 (1).sav", to.data.frame = TRUE)
+demo_descriptors_youth_2017 <-  as.list(attr(Demographics_Youth_2017, "variable.labels"))
+
+#Demographics_Youth_2017 <- Demographics_Youth_2017[Demographics_Youth_2017$rawage > 17,]
+```
+```{r age variable}
+Demographics_Clean_Youth_2017 <- data.frame(Age = Demographics_Youth_2017$rawage)
+
+Demographics_Clean_Youth_2017$Birth_Year <- 2017 - Demographics_Clean_Youth_2017$Age
+```
+
+```{r sex/gender}
+Demographics_Clean_Youth_2017$Gender <- Demographics_Youth_2017$Gender_r
+
+```
+
+```{r sexual orientation}
+Demographics_Clean_Youth_2017$Sexual_Orientation <- recode(as.character(Demographics_Youth_2017$sexorient), "1" = "Straight", "2" = "Gay or lesbian" , "3" = "Bisexual", "4" = "Unsure / questioning", .default = "Unknown", .missing = "Unknown")
+
+
+```
+
+```{r Ethnicity}
+#Ethnicity
+Demographics_Clean_Youth_2017$Ethnicity <- recode(Demographics_Youth_2017$Ethnicity, "Other" = "Other Ethnicity")
+
+#Race raw data
+Demographics_Clean_Youth_2017$Race_Full <- recode(Demographics_Youth_2017$race, "Hative HI/Pacific Islander" = "Native HI/Pacific Islander", "Don't Know" = "Unknown", "Blank" ="Unknown", "Refused" = "Unknown")
+
+#Race Recode
+Demographics_Clean_Youth_2017$Race_Recode <- recode(Demographics_Clean_Youth_2017$Race_Full, "European American" = "European American", "African American" = "African American", "Other Value" ="Other Ethnicity", "Unknown" ="Unknown", .default = "Other Ethnicity")
+
+
+```
+
+```{r Veteran}
+#Veteran (known or unknown discharge status)
+Demographics_Clean_Youth_2017$Veteran <- recode(as.character(Demographics_Youth_2017$rawveteran), "0" = 0, "1" =1, .default = 2, .missing = 2)
+
+```
+
+```{r chronic variables}
+#condition
+Demographics_Clean_Youth_2017$Chronic_Condition <- recode(as.character(Demographics_Youth_2017$chronhealth), "0" = 0, "1" =1, .default = 2, .missing = 2)
+
+#time
+Demographics_Clean_Youth_2017$Chronic_Time <-  ifelse(trimws(Demographics_Youth_2017$hmls1yrpast3yrs) == "Yes" | trimws(Demographics_Youth_2017$hmlsmorethan1Yr) == "Yes" | trimws(Demographics_Youth_2017$hmlsMoreThan1YrIn3Yr) == "Yes" , 1, 0) 
+
+#Chronic
+Demographics_Clean_Youth_2017$Chronic <- recode(as.character(Demographics_Youth_2017$chronicP_D), "Yes" = 1, "No" = 0, .missing = 0)
+
+```
+
+```{r adult with child}
+Demographics_Clean_Youth_2017$Adult_With_Child <- ifelse(Demographics_Youth_2017$n_kid > 0 & Demographics_Youth_2017$rawage > 17, 1, 0)
+
+
+```
+
+```{r time variables}
+#Duration of Current Episode
+
+Demographics_Clean_Youth_2017$Current_Stint_Duration <- recode(trimws(Demographics_Youth_2017$TimeHmlsMths), "2 Months" = "1-3 Months", "3 Months" = "1-3 Months", "6 Months" = "6-11 Months", "7-11 Months" = "6-11 Months")
+
+Demographics_Clean_Youth_2017$Current_Stint_Duration_Detailed <- Demographics_Youth_2017$time_hmls*365
+
+#Total Times Homeless in the Past Three Years (housed and then homeless again)
+
+Demographics_Clean_Youth_2017$Times_Homeless_3yrs <- recode(trimws(Demographics_Youth_2017$hmlspast3yrs), "Don't know" = "Unknown", "Blank" = "Unknown", "Refused"= "Unknown", "v" = "Unknown")
+
+#Total Times Homeless in the Past Year (housed and then homeless again)
+Demographics_Clean_Youth_2017$Times_Homeless_Past_Year<- recode(trimws(Demographics_Youth_2017$hmlspast1yr), "Don't know" = "Unknown", "Blank" = "Unknown", "Refused"= "Unknown", "v" = "Unknown", "")
+
+#Location Before current Homeless stint
+
+Demographics_Clean_Youth_2017$Location_Before_Current_Stint <- recode(Demographics_Youth_2017$place_befhmls, "1" = "Los Angeles County", "2" = "Other county in Southern California", "3" = "Other county in California", "4" = "Out of state", "5" = "Outside of US", "D" = "Unknown", "E" = "Unknown", "R" ="Unknown", "S" = "Unknown", "M" = "Unknown")
+
+#If they answered LAC, what community
+
+Demographics_Clean_Youth_2017$LA_Community_Before_Current_Stint <- Demographics_Youth_2017$Community_Name
+
+#SERVICE PLANNING AREA 
+
+Demographics_Clean_Youth_2017$SPA <- Demographics_Youth_2017$SPA
+
+Demographics_Clean_Youth_2017$Census_Tract <- Demographics_Youth_2017$Tract
+
+```
+
+```{r living situation}
+#The time window changed from 2011 from past year to past 6 months
+#LIVED OUTSIDE IN TENT IN THE PAST 6 MONTHS?
+
+Demographics_Clean_Youth_2017$Tent_Past_6Mnths <- recode(trimws(Demographics_Youth_2017$tent), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2, .missing = 2)
+
+#LIVED IN A Makeshift Shelter?
+Demographics_Clean_Youth_2017$MSshelter_Past_6Mnths <- recode(trimws(Demographics_Youth_2017$MSshelter), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#LIVED IN A CAR?
+
+Demographics_Clean_Youth_2017$Car_Past_6Mnths <- recode(trimws(Demographics_Youth_2017$car), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#LIVED IN A VAN?
+Demographics_Clean_Youth_2017$Van_Past_6Mnths <- recode(trimws(Demographics_Youth_2017$van), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#LIVED IN AN RV?
+Demographics_Clean_Youth_2017$RV_Camper_Past_6Mnths <- recode(trimws(Demographics_Youth_2017$RV_Camper), "Yes" = 1, "No" = 0, "Don't Know" = 2, "Refused" = 2)
+
+#ANY TYPE OF AUTOMOBILE?
+Demographics_Clean_Youth_2017$Automobile_Past_6Mnths <- ifelse(Demographics_Clean_Youth_2017$Car_Past_6Mnths == 1 | Demographics_Clean_Youth_2017$Van_Past_6Mnths ==1 | Demographics_Clean_Youth_2017$RV_Camper_Past_6Mnths ==1, 1, ifelse(Demographics_Clean_Youth_2017$Car_Past_6Mnths == 0 & Demographics_Clean_Youth_2017$Van_Past_6Mnths == 0 & Demographics_Clean_Youth_2017$RV_Camper_Past_6Mnths == 0,0,2))
+
+```
+
+```{r last month}
+Demographics_Clean_Youth_2017$Outside_Majority_Last_Month <- as.character(Demographics_Youth_2017$dwelling_r)
+
+Demographics_Clean_Youth_2017$Outside_Majority_Last_Month[Demographics_Clean_Youth_2017$Outside_Majority_Last_Month == "Vehicle"] <- as.character(Demographics_Youth_2017$dwelling[Demographics_Clean_Youth_2017$Outside_Majority_Last_Month=="Vehicle"])
+
+Demographics_Clean_Youth_2017$Outside_Majority_Last_Month <- recode(Demographics_Clean_Youth_2017$Outside_Majority_Last_Month, "Outdoor encampment or shelter" = "Outdoor encampment or tent or makeshift shelter", "1" = "Car or Truck", "2" = "Van", "3" = "RV or Camper")
+
+
+```
+
+```{r Physical/Sexual Abuse}
+#Have you been physically or sexually abused by a relative or someone you have lived with?
+
+Demographics_Clean_Youth_2017$Physical_Sexual_Abuse <-  ifelse(Demographics_Youth_2017$dv_sexual == "Yes" | Demographics_Youth_2017$dv_physical == "Yes", 1, 0)
+
+#Forced sex with payment to someone other than yourself?
+
+Demographics_Clean_Youth_2017$Sex_Traffic <- recode(as.character(Demographics_Youth_2017$sex_traff), "1" = 1, "0" = 0, .default = 2, .missing = 2)
+
+```
+
+```{r Disabilities/Illness}
+#Have you ever had or been told by a healthcare provider you had one of these conditions?
+#This differs from 2011 where it only asks about the previous year.
+
+#Physical Disability
+Demographics_Clean_Youth_2017$Physical_Disability_Ever <- recode(as.character(Demographics_Youth_2017$phys_disab), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#Physical Illness (Chronic, Ongoing)
+Demographics_Clean_Youth_2017$Physical_Illness_Ever <- recode(as.character(Demographics_Youth_2017$phys_illness), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#Alcohol Abuse
+Demographics_Clean_Youth_2017$Alcohol_Abuse_Ever <- recode(as.character(Demographics_Youth_2017$alcohol), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#Drug Abuse
+Demographics_Clean_Youth_2017$Drug_Abuse_Ever <- recode(as.character(Demographics_Youth_2017$drugabuse), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#Mental Illness
+Demographics_Clean_Youth_2017$Mental_Illness_Ever <- recode(as.character(Demographics_Youth_2017$ment_illness), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#severe depression
+Demographics_Clean_Youth_2017$Severe_Depression_Ever <- recode(as.character(Demographics_Youth_2017$depression), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#ptsd
+Demographics_Clean_Youth_2017$PTSD_Ever <- recode(as.character(Demographics_Youth_2017$PTSD), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#TRAUMATIC BRAIN INJURY (TBI)
+
+Demographics_Clean_Youth_2017$Traumatic_Brain_Injury_Ever <- recode(as.character(Demographics_Youth_2017$braininjury), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+#Developmental Disability (18+)
+
+Demographics_Clean_Youth_2017$Developmental_Disability_Ever <- recode(as.character(Demographics_Youth_2017$develop), "0" = 0, "1" = 1, .default  = 2, .missing = 2)
+
+```
+
+```{r HIV}
+Demographics_Clean_Youth_2017$HIV_Positive <- recode(Demographics_Youth_2017$hiv, "0" = 0, "1" = 1, .default = 2) 
+
+```
+
+```{r drugs and alcohol}
+#Catch all for drug and alcohol abuse 
+Demographics_Clean_Youth_2017$Drug_Alcohol_History <- ifelse(trimws(Demographics_Youth_2017$alcohol) == "1" | trimws(Demographics_Youth_2017$drugabuse) == "1", 1, ifelse(trimws(Demographics_Youth_2017$alcohol) == "0" & trimws(Demographics_Youth_2017$drugabuse) == "0", 0, 2)) 
+
+```
+
+
+
+```{r view data}
+View(Demographics_Clean_Youth_2017)
+
+```
