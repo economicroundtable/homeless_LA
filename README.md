@@ -1,7 +1,7 @@
 # homeless_LA
 This repository contains individual-year and multi-year data sets prepared and documented by the Economic Roundtable, based on raw data supplied by the Los Angeles Homeless Services Authority (LAHSA). The repository also includes code for projects based on the data -- a method for estimating the size of the annualized homeless population and a shiny app to visualize the data. 
 
-THANKS to Paul Beeman, intern at the Economic Roundtable, for creating the cleaned data files that made this work possible. Thanks also to the 40+ volunteers who participated in our data dive with DataKind, where we first shared this data. The weekend-long, volunter-driven data hackathon produced valuable data visualizations and strategies for annualized population estimation that have been incorporated in the projects in this repository. We're very glad that you chose to share your skills with us, and we hope that you find this repository useful.
+THANKS to Paul Beeman, intern at the Economic Roundtable, for creating the cleaned data files that made this work possible. Thanks also to the 40+ volunteers who participated in our data dive with DataKind, where we first shared this data. The weekend-long, volunter-driven data hackathon produced valuable data visualizations and strategies for annualized population estimation that have been incorporated in the projects in this repository. We're very glad that you chose to share your skills with us, and we hope that you find this repository useful. We encourage all users to fork the repository and share code from the data dive and beyond.
 
 ---------
 
@@ -19,7 +19,6 @@ Outline of the repository (folders listed alphabetically)
 
 6. Shiny - The code behind our shiny app to visualize and compare data: (link TBA). Many thanks to Lisa Ann Yu, a volunteer at our data dive for creating the framework for this app, and our intern Paul Beeman for turning it into a polished final product.
 
-7. User Projects - This is a folder where users of the data can share code to analyze, visualize, or otherwise use the data. Please share your work from the data dive and beyond.
 
 Key notes about the final data:
 -   Geography: Data pertains to the Los Angeles Continuum of Care (CoC) which includes all of Los Angeles County except the cities of Pasadena, Glendale and Long Beach.
