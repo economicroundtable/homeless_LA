@@ -1,26 +1,7 @@
-# Data loading and tidying for our sheltered and unsheltered data sets
-# Jane Carlen
-# July 2018
-#
-# TO DO
-# Fix current stint duration variable for 
+# Create Weights_rescale for 2016 and 2017 data
 
-# Notes from methodology reports ####
-
-# From the 2017 methodology report footnotes:
-# [Original] Survey estimates produced in 2017 overestimated the number of unsheltered youth by 2,746 persons.
-
-# Caveats to shelter data being a "complete census":
-# "By applying the HMIS data to the non-HMIS providers and DV shelters, we
-# implicitly assumed that the distribution of characteristics in the HMIS
-# shelters were the same as those in the non-HMIS and DV shelters. Also note
-# veterans are overrepresented in the HMIS population; however, this only poses
-# aproblem if the characteristics of veteran families in the HMIS data are
-# different compared to non-HMIS veteran providers."
 
 # 0. Setup ####
-
-setwd("~/ERt/ert_data_dive/homeless_LA/")
 
 library(dplyr)
 library(questionr)
@@ -30,7 +11,7 @@ library(foreign)
 demographic_11 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2011_Final.csv")
 demographic_13 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2013_Final.csv")
 demographic_15 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2015_Final.csv")
-demographic_16 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2016_Final.csv") #includes youth
+demographic_16 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2016_Final.csv")
 demographic_17 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2017_Final.csv")
 
 shelter_16 = read.csv("Final Data and Codebooks/Sheltered/HMIS_2016_Final.csv")
@@ -73,12 +54,7 @@ shelter_17 = shelter_17 %>%
                                    n_shelter_youth_17* Weights/sum(shelter_17$Weights[shelter_17$Age %in% youth]), 
                                    (n_shelter_17 - n_shelter_youth_17) * Weights/sum(shelter_17$Weights[!shelter_17$Age %in% youth])))
 
-#write.csv(demographic_17, "Final Data and Codebooks/Unsheltered/Demo_2017_Final.csv")
-#write.csv(shelter_17, "Final Data and Codebooks/Sheltered/HMIS_2017_Final.csv")
-#write.csv(demographic_17$Weights_rescale, "Demo_2017_Weights_rescale.csv")
-#write.csv(shelter_17$Weights_rescale, "Shelter_2017_Weights_rescale.csv")
-
-# 1b. Reformat demographic_16 weights ####
+# 1b. Reformat 2016 weights ####
 
 n_unshelter_16 = 32781
 n_unshelter_youth_16 = 1152
@@ -98,10 +74,15 @@ shelter_16 = shelter_16 %>%
                                    n_shelter_youth_16* Weights/sum(shelter_16$Weights[shelter_16$Age %in% youth]), 
                                    (n_shelter_16 - n_shelter_youth_16) * Weights/sum(shelter_16$Weights[!shelter_16$Age %in% youth])))
 
-#write.csv(demographic_16, "Final Data and Codebooks/Unsheltered/Demo_2016_Full_Final.csv")
-#write.csv(shelter_16, "Final Data and Codebooks/Sheltered/HMIS_2016_Final.csv")
-#write.csv(demographic_16$Weights_rescale, "Demo_2016_Weights_rescale.csv")
-#write.csv(shelter_16$Weights_rescale, "Shelter_2016_Weights_rescale.csv")
+# Note from methodology reports:
+
+# Caveats to shelter data being a "complete census":
+# "By applying the HMIS data to the non-HMIS providers and DV shelters, we
+# implicitly assumed that the distribution of characteristics in the HMIS
+# shelters were the same as those in the non-HMIS and DV shelters. Also note
+# veterans are overrepresented in the HMIS population; however, this only poses
+# aproblem if the characteristics of veteran families in the HMIS data are
+# different compared to non-HMIS veteran providers."
 
 # 2. Weighted vs. Unweighted  ####
 
@@ -148,5 +129,6 @@ barplot(prop.table(wtd.table(tmp$Veteran, w = tmp$Weights_rescale)), add = T, co
 barplot(sort(prop.table(wtd.table(tmp$Census_Tract, w = tmp$dummyWeights)), decreasing = T), ylim = c(0,.05))
 barplot(sort(prop.table(wtd.table(tmp$Census_Tract, w = tmp$Weights_rescale)), decreasing = T),
         add = T, col = "red", density = 45)
+
 
 
