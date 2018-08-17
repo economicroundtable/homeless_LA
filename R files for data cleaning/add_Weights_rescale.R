@@ -30,13 +30,13 @@ library(foreign)
 demographic_11 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2011_Final.csv")
 demographic_13 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2013_Final.csv")
 demographic_15 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2015_Final.csv")
-demographic_16 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2016_FULL_Final.csv") #includes youth
+demographic_16 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2016_Final.csv") #includes youth
 demographic_17 = read.csv("Final Data and Codebooks/Unsheltered/Demo_2017_Final.csv")
 
 shelter_16 = read.csv("Final Data and Codebooks/Sheltered/HMIS_2016_Final.csv")
 shelter_17 = read.csv("Final Data and Codebooks/Sheltered/HMIS_2017_Final.csv")
 
-multiyear = read.csv("Final Data and Codebooks/Multi-Year/Homelessness_Multi_Year_Final.csv")
+multiyear = read.csv("Final Data and Codebooks/Multi-Year/Homelessness_Multi_Year_Final.csv") #doesn't have weights
 
 youth = 18:24
 
@@ -73,8 +73,8 @@ shelter_17 = shelter_17 %>%
                                    n_shelter_youth_17* Weights/sum(shelter_17$Weights[shelter_17$Age %in% youth]), 
                                    (n_shelter_17 - n_shelter_youth_17) * Weights/sum(shelter_17$Weights[!shelter_17$Age %in% youth])))
 
-write.csv(demographic_17$Weights_rescale, "Final Data and Codebooks/Unsheltered/Demo_2017_Final.csv")
-write.csv(shelter_17$Weights_rescale, "Final Data and Codebooks/Sheltered/HMIS_2017_Final.csv")
+#write.csv(demographic_17, "Final Data and Codebooks/Unsheltered/Demo_2017_Final.csv")
+#write.csv(shelter_17, "Final Data and Codebooks/Sheltered/HMIS_2017_Final.csv")
 #write.csv(demographic_17$Weights_rescale, "Demo_2017_Weights_rescale.csv")
 #write.csv(shelter_17$Weights_rescale, "Shelter_2017_Weights_rescale.csv")
 
@@ -98,8 +98,8 @@ shelter_16 = shelter_16 %>%
                                    n_shelter_youth_16* Weights/sum(shelter_16$Weights[shelter_16$Age %in% youth]), 
                                    (n_shelter_16 - n_shelter_youth_16) * Weights/sum(shelter_16$Weights[!shelter_16$Age %in% youth])))
 
-write.csv(demographic_16$Weights_rescale, "Final Data and Codebooks/Unsheltered/Demo_2016_Full_Final.csv")
-write.csv(shelter_16$Weights_rescale, "Final Data and Codebooks/Sheltered/HMIS_2016_Final.csv")
+#write.csv(demographic_16, "Final Data and Codebooks/Unsheltered/Demo_2016_Full_Final.csv")
+#write.csv(shelter_16, "Final Data and Codebooks/Sheltered/HMIS_2016_Final.csv")
 #write.csv(demographic_16$Weights_rescale, "Demo_2016_Weights_rescale.csv")
 #write.csv(shelter_16$Weights_rescale, "Shelter_2016_Weights_rescale.csv")
 
