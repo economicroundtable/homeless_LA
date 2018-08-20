@@ -1,7 +1,7 @@
 # Processing duration variables we'll use to build annualized population estimates
 #
 # Notes:
-# For only 2016 and 2017 do we have clean sheltered and unsheltered data WITH sampling weights
+# Only 2016 and 2017 have clean sheltered and unsheltered data WITH sampling weights
 ##########################################################################################################
 
 # 0. Setup ####
