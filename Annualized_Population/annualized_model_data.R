@@ -65,7 +65,7 @@ demographic_16$Current_Stint_Duration_Quarters = cut(demographic_16$Current_Stin
 
 # 2. Process Sheltered Duration Variables ####
 
-hmis_2017_tmp = read.spss("../Raw Data Files/Sheltered/2017 Individual HMIS data (11,397) 12-3-2017.sav", to.data.frame = T)
+shelter_raw_17 = read.spss("../Raw Data Files/Sheltered/2017 Individual HMIS data (11,397) 12-3-2017.sav", to.data.frame = T)
 
 #####   What variable to use for current stint duration for sheltered people? ####
 
@@ -87,9 +87,9 @@ hmis_2017_tmp = read.spss("../Raw Data Files/Sheltered/2017 Individual HMIS data
 
 #   Exploratory 2017:  ####
 
-hmis_2017_duration = cbind(dplyr::select(hmis_2017_tmp, starts_with("since_")),
-                           dplyr::select(hmis_2017_tmp, starts_with("hmls_")),
-                           dplyr::select(hmis_2017_tmp, contains("prior")))
+hmis_2017_duration = cbind(dplyr::select(shelter_raw_17, starts_with("since_")),
+                           dplyr::select(shelter_raw_17, starts_with("hmls_")),
+                           dplyr::select(shelter_raw_17, contains("prior")))
 dim(.Last.value)
 
 summary(hmis_2017_duration)
@@ -125,14 +125,12 @@ hist(hmis_2017_duration$since_entry_days,
 
 #   Use a combination ####
 
-shelter_raw_17 = read.spss("../Raw Data Files/Sheltered/2017 Individual HMIS data (11,397) 12-3-2017.sav",
-                           to.data.frame= T)
 #as.list(attr(shelter_raw_17, "variable.labels"))
 #table(shelter_raw_17$exitdt, useNA = "always")
 #sort(unique(shelter_raw_17$exitdt))
 
 #check same:
-sum(hmis_2017_tmp$age_yrs != shelter_17$Age, na.rm = T)
+sum(shelter_raw_17$age_yrs != shelter_17$Age, na.rm = T)
 
 # 1. Use since_hmls_days if available.
 # 2. If not, use since_entry_days <-- why are the day counts so long? would expect 
@@ -143,10 +141,10 @@ shelter_17 = shelter_17 %>%
   mutate(Prior_Homeless = ifelse(Prior_Living_Situation %in%
                                    c("Place not meant for habitation", "Emergency shelter", "Safe haven",
                                      "Hotel or motel paid for w/o emergency shelter voucher", "Interim Housing"), TRUE, FALSE),
-         Since_Homeless_Days = hmis_2017_tmp$since_hmls_days,
-         Since_Entry_Days = hmis_2017_tmp$since_entry_days,
-         Since_Homeless_Months = hmis_2017_tmp$since_hmls_mo,
-         Since_Entry_Months = hmis_2017_tmp$since_entry_mo)
+         Since_Homeless_Days = shelter_raw_17$since_hmls_days,
+         Since_Entry_Days = shelter_raw_17$since_entry_days,
+         Since_Homeless_Months = shelter_raw_17$since_hmls_mo,
+         Since_Entry_Months = shelter_raw_17$since_entry_mo)
 
 #table(shelter_17$Prior_Homeless, useNA = "always")
 #filter(shelter_17, Prior_Homeless == T)$Prior_Living_Situation_Duration
@@ -254,17 +252,17 @@ wtd.hist(c(demographic_17$Current_Stint_Duration_Quarters),
          weight = c(demographic_17$Weights_rescale), xlim = c(0,5),
          breaks = 1000); abline(v = 365, col = "red")
 
+##########################################################################################################
+# 2016 ####
 #########################################################################################################
 #   Exploratory 2016 ####
-  
-shelter_raw_16 = read.spss("../Raw Data Files/Sheltered/2016 HMIS dataset with all people in households (13,690) 5-31-2017.sav",
-                           to.data.frame= T)
 
-hmis_2016_tmp = read.spss("../Raw Data Files/Sheltered/2016 HMIS dataset with all people in households (13,690) 5-31-2017.sav",
-                          to.data.frame = T)
+shelter_raw_16 = read.spss("Raw Data Files/Sheltered/2016 HMIS dataset with all people in households (13,690) 5-31-2017.sav", to.data.frame = T)
 
-hmis_2016_duration = cbind(dplyr::select(hmis_2017_tmp, starts_with("since_")),
-                           dplyr::select(hmis_2017_tmp, starts_with("hmls_")),
-                           dplyr::select(hmis_2017_tmp, contains("prior")))
+hmis_2016_duration = cbind(dplyr::select(shelter_raw_16, contains("since_")),
+                           dplyr::select(shelter_raw_16, contains("hmls")),
+                           dplyr::select(shelter_raw_16, contains("prior")))
+
+# 2016 shelter data doesn't have the necessary level of detail about stint duration to fit the model
 
 
