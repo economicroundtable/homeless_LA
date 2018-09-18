@@ -17,7 +17,7 @@ Outline of the repository (folders listed alphabetically)
 
 5. Raw Data Files - A plethora of raw data files that were supplied to the Economic Roundtable by LAHSA, which we drew from to build our final data files. They date back to 2007, whereas our cleaned data starts at 2011. We recommend using our cleaned data files wherever possible, but the raw files do contain some additional variables or detail within variables that we condensed for interpretability. 
 
-6. Shiny - The code behind our shiny app to visualize and compare data: (link TBA). Many thanks to Lisa Ann Yu, a volunteer at our data dive for creating the framework for this app, and our intern Paul Beeman for turning it into a polished final product.
+6. Shiny - The code behind our shiny app to visualize and compare data: https://economicrt.org/publication/data-visualization/. Many thanks to Lisa Ann Yu, a volunteer at our data dive for creating the framework for this app, and our intern Paul Beeman for turning it into a polished final product.
 
 
 Key notes about the final data:
